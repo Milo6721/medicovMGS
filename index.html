@@ -175,6 +175,13 @@ a.row:hover{background:rgba(255,255,255,.35)}[data-theme=dark] a.row:hover{backg
 .pick .res button{display:block;width:100%;text-align:left;border:0;background:none;padding:10px 14px;font-size:14.5px}
 .pick .res button:hover{background:rgba(var(--accent-rgb),.12)}.pick .res small{color:var(--muted);display:block}
 
+.chip.sel{background:linear-gradient(180deg,#2d8ff0,#0a68c9);color:#fff;box-shadow:0 4px 12px rgba(11,114,214,.4)}
+.hero{padding:22px 22px 18px;margin-bottom:18px}
+.hero small{color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:12px}
+.hero .when{font-size:34px;font-weight:800;letter-spacing:-.03em;line-height:1.1;margin:6px 0 4px}
+.hero .who{font-size:16px;color:var(--text)}.hero .acts{margin-top:14px}
+.bigcode{font-size:40px;font-weight:800;letter-spacing:.12em;text-align:center;padding:18px 8px;margin:6px 0 12px;border-radius:22px;background:var(--field);box-shadow:0 0 0 .5px var(--field-bd);font-variant-numeric:tabular-nums}
+a.btn{text-decoration:none}
 /* asystent AI */
 .ai{padding:16px 16px 14px;border-radius:26px;margin-bottom:16px;background:linear-gradient(135deg,rgba(var(--accent-rgb),.14),rgba(47,158,68,.12));box-shadow:0 0 0 .5px rgba(var(--accent-rgb),.35),inset 0 1px 0 var(--glass-in)}
 .ai h3{margin:0 0 4px;font-size:16px;display:flex;align-items:center;gap:8px}.ai h3 svg{color:var(--accent)}
@@ -301,7 +308,7 @@ const fTime=d=>new Date(d).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-
 const fDT=d=>d?fDate(d)+' '+fTime(d):'—';
 const age=b=>{if(!b)return '';const t=new Date(),d=new Date(b+'T00:00');let a=t.getFullYear()-d.getFullYear();if(t<new Date(t.getFullYear(),d.getMonth(),d.getDate()))a--;return a};
 const initials=n=>String(n||'?').replace(/^(dr|lek\.|prof\.|mgr)\s+/i,'').split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
-const ROLE={doctor:'Lekarz',student:'Student medycyny',reception:'Rejestracja',pending:'Oczekuje na zatwierdzenie'};
+const ROLE={doctor:'Lekarz',student:'Student medycyny',reception:'Rejestracja',pending:'Oczekuje na zatwierdzenie',patient:'Pacjent'};
 const ST={zaplanowana:'Zaplanowana',w_trakcie:'W trakcie',odbyta:'Odbyta',odwolana:'Odwołana',nieobecnosc:'Nieobecność'};
 const TYPES=['Konsultacja','Wizyta kontrolna','Badanie','Szczepienie','Teleporada','Zabieg'];
 const REFUND=['pełnopłatna','100%','50%','30%','ryczałt'];
@@ -319,7 +326,7 @@ const ICON={
  chev:'<path d="M9 6l6 6-6 6"/>',logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
  back:'<path d="M15 18l-6-6 6-6"/>',warn:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h0"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h0"/>',
  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',sun:'<circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
- spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',check:'<path d="M5 12l5 5 9-10"/>'
+ spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',check:'<path d="M5 12l5 5 9-10"/>'
 };
 const ic=n=>`<svg class="i" viewBox="0 0 24 24">${ICON[n]||''}</svg>`;
 let toastT;function toast(m,err){const t=$('#toast');t.textContent=m;t.classList.toggle('err',!!err);t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),err?4200:2400)}
@@ -341,14 +348,19 @@ const Sb={
     const {data}=await this.c.auth.getSession();return data.session?.user||null;
   },
   async signIn({email,password}){const {data,error}=await this.c.auth.signInWithPassword({email,password});if(error)throw error;return data.user},
-  async signUp({email,password,full_name}){const {data,error}=await this.c.auth.signUp({email,password,options:{data:{full_name}}});if(error)throw error;return data},
+  async signUp({email,password,full_name,invite_code}){const {data,error}=await this.c.auth.signUp({email,password,options:{data:{full_name,...(invite_code?{invite_code}:{})}}});if(error)throw error;return data},
+  async rpc(name,args){const {data,error}=await this.c.rpc(name,args||{});if(error)throw error;return data},
   async reset(email){const {error}=await this.c.auth.resetPasswordForEmail(email,{redirectTo:location.href.split('#')[0]});if(error)throw error},
   async signOut(){await this.c.auth.signOut()},
   T:t=>'medicov_'+t,
   async getProfile(id){
     const q=()=>this.c.from('medicov_profiles').select('*').eq('id',id).maybeSingle();
     let {data,error}=await q();if(error)throw error;
-    if(!data){const r=await this.c.rpc('medicov_request_access');if(r.error)throw r.error;({data,error}=await q());if(error)throw error}
+    if(!data){
+      // konto pacjenta: kod zaproszenia zapisany przy rejestracji
+      const ud=await this.c.auth.getUser(),code=ud&&ud.data&&ud.data.user&&ud.data.user.user_metadata&&ud.data.user.user_metadata.invite_code;
+      if(code){const c=await this.c.rpc('medicov_claim_patient',{p_code:code});if(c.error)throw c.error;if(!c.data)window._claimFail=true}
+      const r=await this.c.rpc('medicov_request_access');if(r.error)throw r.error;({data,error}=await q());if(error)throw error}
     if(!data)throw new Error('Nie udało się utworzyć profilu w panelu');return data},
   async list(t,o={}){let q=this.c.from(this.T(t)).select('*');if(o.eq)for(const k in o.eq)q=q.eq(k,o.eq[k]);if(o.order)q=q.order(o.order[0],{ascending:o.order[1]!==false});if(o.limit)q=q.limit(o.limit);const {data,error}=await q;if(error)throw error;return data},
   async insert(t,row){const {data,error}=await this.c.from(this.T(t)).insert(row).select().single();if(error)throw error;return data},
@@ -361,17 +373,23 @@ const Sb={
 };
 
 const Demo={
-  K:'medicov-demo-v2',
+  K:'medicov-demo-v3',
   load(){try{this.db=JSON.parse(store.get(this.K))}catch(_){}if(!this.db){this.db=seed();this.save()}},
   save(){store.set(this.K,JSON.stringify(this.db))},
   reset(){store.del(this.K);this.load()},
   async init(){this.load();const id=store.get('medicov-demo-uid',true);return id?{id}:null},
   async signIn({persona}){store.set('medicov-demo-uid',persona,true);return {id:persona}},
-  async signUp(){throw new Error('Rejestracja jest niedostępna w trybie demonstracyjnym – wybierz jedną z ról.')},
+  async signUp(){throw new Error('Rejestracja jest niedostępna w trybie demonstracyjnym – wybierz jedną z ról na ekranie logowania.')},
+  async rpc(n,a){const f=DemoRpc[n];if(!f)throw new Error('Nieznana funkcja '+n);return clone(f(a||{}))},
   async reset(){throw new Error('Niedostępne w trybie demonstracyjnym')},
   async signOut(){store.del('medicov-demo-uid',true)},
   async getProfile(id){return clone(this.db.profiles.find(p=>p.id===id))},
   async list(t,o={}){let r=[...(this.db[t]||[])];if(o.eq)for(const k in o.eq)r=r.filter(x=>x[k]===o.eq[k]);
+    if(ME&&ME.role==='patient'){ // odpowiednik RLS: pacjent widzi tylko swoje dane
+      const me=this.db.patients.find(p=>p.user_id===ME.id),mine=new Set(this.db.visits.filter(v=>me&&v.patient_id===me.id).map(v=>v.id));
+      if(t==='patients')r=r.filter(p=>p.user_id===ME.id);else if(t==='visits')r=r.filter(v=>me&&v.patient_id===me.id);
+      else if(t==='prescriptions')r=r.filter(x=>me&&x.patient_id===me.id);else if(t==='visit_notes')r=r.filter(n=>n.signed_at&&mine.has(n.visit_id));
+      else if(t==='profiles')r=r.filter(p=>p.id===ME.id);else if(t==='audit_log')r=[];}
     if(o.order){const [c,asc]=o.order;r.sort((a,b)=>(a[c]>b[c]?1:a[c]<b[c]?-1:0)*(asc===false?-1:1))}if(o.limit)r=r.slice(0,o.limit);return clone(r)},
   _log(action,table,row_id){this.db.audit_log.push({id:this.db.audit_log.length+1,at:iso(),user_id:ME?.id,user_email:ME?.email,action,table_name:table,row_id:String(row_id||'')})},
   async insert(t,row){row={id:uid(),created_at:iso(),...row};
@@ -391,7 +409,8 @@ function seed(){
    {id:'u-adm',email:'m.wisniewski@medicovmgs.pl',full_name:'dr Marek Wiśniewski',role:'doctor',is_admin:true,active:true,specialty:'Choroby wewnętrzne',license_no:'7654321'},
    {id:'u-stu',email:'j.nowak@student.pl',full_name:'Julia Nowak',role:'student',is_admin:false,active:true,year_of_study:'5. rok'},
    {id:'u-rec',email:'rejestracja@medicovmgs.pl',full_name:'Ewa Zielińska',role:'reception',is_admin:false,active:true},
-   {id:'u-new',email:'nowy@example.pl',full_name:'Piotr Lis',role:'pending',is_admin:false,active:true}];
+   {id:'u-new',email:'nowy@example.pl',full_name:'Piotr Lis',role:'pending',is_admin:false,active:true},
+   {id:'u-pat',email:'jan.nowicki@example.com',full_name:'Jan Nowicki',role:'patient',is_admin:false,active:true}];
   const pt=(i,f,l,b,sex,ph,al,ad)=>({id:'p'+i,first_name:f,last_name:l,pesel:'',birth_date:b,sex,phone:ph,email:f.toLowerCase()+'.'+norm(l)+'@example.com',address:ad,allergies:al||'',notes:'',created_at:iso()});
   const pts=[pt(1,'Jan','Nowicki','1962-03-14','M','601 100 200','Penicylina','ul. Lipowa 4, Kraków'),pt(2,'Maria','Wójcik','1988-11-02','K','602 200 300','','ul. Krótka 12/3, Kraków'),
    pt(3,'Tomasz','Kamiński','1975-07-21','M','603 300 400','','os. Słoneczne 8, Wieliczka'),pt(4,'Aleksandra','Lewandowska','1999-01-30','K','604 400 500','Orzechy, pyłki traw','ul. Polna 1, Kraków'),
@@ -408,9 +427,47 @@ function seed(){
   const rxd=(o)=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+o);return dKey(d)};
   const R=[{id:'r1',number:'MGS/'+now.getFullYear()+'/000001',eprescription_no:'',access_code:'',patient_id:'p1',visit_id:'v10',doctor_id:'u-doc',issued_at:rxd(-1),valid_until:rxd(29),items:[{name:'Amlodypina',dose:'5 mg',qty:'30 tabl.',dosage:'1 tabl. rano'},{name:'Peryndopryl',dose:'5 mg',qty:'30 tabl.',dosage:'1 tabl. rano'}],refund:'50%',notes:'',status:'wystawiona',created_at:iso()},
    {id:'r2',number:'MGS/'+now.getFullYear()+'/000002',eprescription_no:'',access_code:'',patient_id:'p2',visit_id:'v2',doctor_id:'u-adm',issued_at:rxd(0),valid_until:rxd(30),items:[{name:'Paracetamol',dose:'500 mg',qty:'20 tabl.',dosage:'1–2 tabl. co 6 h, max 8 tabl./dobę'}],refund:'pełnopłatna',notes:'',status:'wystawiona',created_at:iso()}];
-  return {profiles:P,patients:pts,visits:V,visit_notes:N,prescriptions:R,audit_log:[],clinic_settings:[{id:1,name:'Medicov MGS – Centrum Medyczne',address:'ul. Przykładowa 1, 30-001 Kraków',phone:'12 000 00 00',email:'kontakt@medicovmgs.pl',nip:'',regon:'',footer_note:''}]};
+  pts[0].user_id='u-pat';
+  const AV=[];[1,2,3,4,5].forEach(d=>AV.push({id:'a-doc-'+d,doctor_id:'u-doc',weekday:d,start_time:'08:00',end_time:'14:00',slot_minutes:20}));[1,3,5].forEach(d=>AV.push({id:'a-adm-'+d,doctor_id:'u-adm',weekday:d,start_time:'12:00',end_time:'18:00',slot_minutes:30}));
+  return {availability:AV,profiles:P,patients:pts,visits:V,visit_notes:N,prescriptions:R,audit_log:[],clinic_settings:[{id:1,name:'Medicov MGS – Centrum Medyczne',address:'ul. Przykładowa 1, 30-001 Kraków',phone:'12 000 00 00',email:'kontakt@medicovmgs.pl',nip:'',regon:'',footer_note:''}]};
 }
 
+const isoDow=d=>(d.getDay()+6)%7+1;
+const DemoRpc={
+  medicov_public_doctors(){return Demo.db.profiles.filter(p=>p.role==='doctor'&&p.active).map(p=>({id:p.id,full_name:p.full_name,specialty:p.specialty||'',license_no:p.license_no||''}))},
+  medicov_free_slots({p_doctor,p_from,p_to}){
+    const out=[],min=Date.now()+3600e3,booked=new Set(Demo.db.visits.filter(v=>v.doctor_id===p_doctor&&v.status!=='odwolana').map(v=>new Date(v.scheduled_at).getTime()));
+    const from=new Date(p_from+'T00:00'),to=new Date(p_to+'T00:00'),lim=new Date(from);lim.setDate(lim.getDate()+30);const end=to<lim?to:lim;
+    for(let d=new Date(from);d<=end;d.setDate(d.getDate()+1)){
+      Demo.db.availability.filter(a=>a.doctor_id===p_doctor&&a.weekday===isoDow(d)).forEach(a=>{
+        const [sh,sm]=a.start_time.split(':').map(Number),[eh,em]=a.end_time.split(':').map(Number);
+        for(let m=sh*60+sm;m+a.slot_minutes<=eh*60+em;m+=a.slot_minutes){const t=new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,m);if(t.getTime()>min&&!booked.has(t.getTime()))out.push({slot:t.toISOString()})}});
+    }
+    return out.sort((a,b)=>a.slot<b.slot?-1:1)},
+  medicov_book_visit({p_doctor,p_at,p_type}){
+    const me=Demo.db.patients.find(p=>p.user_id===ME.id);if(!me)throw new Error('To konto nie jest połączone z kartą pacjenta');
+    if(!['Konsultacja','Wizyta kontrolna','Teleporada'].includes(p_type||'Konsultacja'))throw new Error('Niedozwolony rodzaj wizyty');
+    const at=new Date(p_at).toISOString();
+    if(!DemoRpc.medicov_free_slots({p_doctor,p_from:dKey(at),p_to:dKey(at)}).some(s=>s.slot===at))throw new Error('Ten termin jest już zajęty lub niedostępny. Wybierz inny.');
+    if(Demo.db.visits.filter(v=>v.patient_id===me.id&&v.status==='zaplanowana'&&new Date(v.scheduled_at)>new Date()).length>=5)throw new Error('Masz już 5 zaplanowanych wizyt. Odwołaj jedną lub zadzwoń do przychodni.');
+    const v={id:uid(),patient_id:me.id,doctor_id:p_doctor,student_id:null,scheduled_at:at,type:p_type||'Konsultacja',status:'zaplanowana',created_by:ME.id,created_at:iso()};
+    Demo.db.visits.push(v);Demo._log('INSERT','visits',v.id);Demo.save();return v.id},
+  medicov_cancel_visit({p_id}){
+    const me=Demo.db.patients.find(p=>p.user_id===ME.id),v=Demo.db.visits.find(x=>x.id===p_id);
+    if(!me||!v||v.patient_id!==me.id||v.status!=='zaplanowana'||new Date(v.scheduled_at).getTime()<=Date.now()+2*3600e3)throw new Error('Tej wizyty nie można odwołać online (możliwe do 2 godzin przed terminem). Zadzwoń do przychodni.');
+    v.status='odwolana';Demo._log('UPDATE','visits',v.id);Demo.save();return null},
+  medicov_update_my_contact({p_phone,p_email,p_address}){
+    const me=Demo.db.patients.find(p=>p.user_id===ME.id);if(!me)throw new Error('To konto nie jest połączone z kartą pacjenta');
+    Object.assign(me,{phone:p_phone,email:p_email,address:p_address});Demo._log('UPDATE','patients',me.id);Demo.save();return null},
+  medicov_generate_link_code({p_patient}){
+    const p=Demo.db.patients.find(x=>x.id===p_patient);if(!p)throw new Error('Nie znaleziono pacjenta');if(p.user_id)throw new Error('Ten pacjent ma już połączone konto w portalu');
+    const c=(crypto.randomUUID().replace(/-/g,'').slice(0,10)).toUpperCase();p.link_code=c;p.link_code_expires=new Date(Date.now()+14*864e5).toISOString();Demo.save();return c.slice(0,5)+'-'+c.slice(5)},
+  medicov_claim_patient({p_code}){
+    const c=String(p_code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const p=Demo.db.patients.find(x=>x.link_code===c&&!x.user_id&&new Date(x.link_code_expires)>new Date());if(!p)return null;
+    const pr=Demo.db.profiles.find(x=>x.id===ME.id);if(pr&&!['pending','patient'].includes(pr.role))throw new Error('To konto należy do pracownika przychodni i nie może być kontem pacjenta');
+    if(pr)pr.role='patient';p.user_id=ME.id;p.link_code=null;Demo._log('UPDATE','patients',p.id);Demo.save();return p.id}
+};
 function mockAI(p){
   const t=norm(p.complaint);const has=r=>r.test(t);
   const base={summary:'',differential:[],red_flags:[],clarifying_questions:[],tests:[],meds:[],recommendations:[],_demo:true};
@@ -469,22 +526,35 @@ async function afterLogin(id){
 }
 async function loadAll(){
   const lim={limit:2000};
+  if(ME.role==='patient'){
+    const [pa,vi,rx,st,docs]=await Promise.all([A.list('patients',{limit:5}),A.list('visits',{order:['scheduled_at',false],limit:500}),
+      A.list('prescriptions',{order:['created_at',false],limit:500}),A.list('clinic_settings',{limit:1}),A.rpc('medicov_public_doctors',{})]);
+    D.patients=pa;D.visits=vi;D.prescriptions=rx;D.settings=st[0]||{name:'Medicov MGS – Centrum Medyczne'};D._notes=[];D.avail=[];
+    D.profiles=[ME,...docs.filter(d=>d.id!==ME.id).map(d=>({...d,role:'doctor',active:true}))];return;
+  }
   const [pr,pa,vi,rx,st]=await Promise.all([
     A.list('profiles',{order:['full_name']}),A.list('patients',{order:['last_name'],...lim}),A.list('visits',{order:['scheduled_at',false],...lim}),
     can.rxRead()?A.list('prescriptions',{order:['created_at',false],...lim}):Promise.resolve([]),A.list('clinic_settings',{limit:1})]);
   D.profiles=pr;D.patients=pa;D.visits=vi;D.prescriptions=rx;D.settings=st[0]||{name:'Medicov MGS – Centrum Medyczne'};
   D._notes=ME.role==='doctor'?await A.list('visit_notes',{limit:1000}).catch(()=>[]):[];
+  D.avail=await A.list('availability',{limit:1000}).catch(()=>[]);
 }
 function logout(){guard(async()=>{await A.signOut();ME=null;location.hash='#/login';route()})}
 
 function viewLogin(mode='in'){
   const demo=!LIVE;
-  const personas=[['u-adm','dr Marek Wiśniewski','Lekarz + administrator'],['u-doc','dr Anna Kowalska','Lekarz'],['u-stu','Julia Nowak','Student medycyny'],['u-rec','Ewa Zielińska','Rejestracja'],['u-new','Piotr Lis','Konto oczekujące na zatwierdzenie']];
+  const personas=[['u-adm','dr Marek Wiśniewski','Lekarz + administrator'],['u-doc','dr Anna Kowalska','Lekarz'],['u-stu','Julia Nowak','Student medycyny'],['u-rec','Ewa Zielińska','Rejestracja'],['u-pat','Jan Nowicki','Pacjent (portal pacjenta)'],['u-new','Piotr Lis','Konto oczekujące (może wpisać kod z przychodni)']];
   let body;
   if(demo)body=`<span class="demo-tag">TRYB DEMONSTRACYJNY</span><p>Dane są fikcyjne i zapisywane tylko w tej przeglądarce. Wybierz rolę, aby zobaczyć, jak panel wygląda dla różnych użytkowników.</p>
     <div class="personas">${personas.map(([id,n,r])=>`<button data-act="persona" data-id="${id}"><span class="av">${esc(initials(n))}</span><span><b>${esc(n)}</b><small>${esc(r)}</small></span></button>`).join('')}</div>
     <div class="alt"><a class="link" data-act="resetDemo">Przywróć dane demonstracyjne</a></div>`;
-  else if(mode==='up')body=`<h1>Utwórz konto</h1><p>Konto zostanie aktywowane po zatwierdzeniu przez administratora placówki.</p>
+  else if(mode==='pat')body=`<h1>Konto pacjenta</h1><p>Kod zaproszenia otrzymasz w przychodni po potwierdzeniu tożsamości, np. w rejestracji.</p>
+    <form data-form="patsignup"><div class="fg"><label class="fl">Imię i nazwisko</label><input class="field" name="full_name" required autocomplete="name"></div>
+    <div class="fg"><label class="fl">E-mail</label><input class="field" type="email" name="email" required autocomplete="email"></div>
+    <div class="fg"><label class="fl">Hasło (min. 8 znaków)</label><input class="field" type="password" name="password" minlength="8" required autocomplete="new-password"></div>
+    <div class="fg"><label class="fl">Kod z przychodni</label><input class="field" name="code" required placeholder="XXXXX-XXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase"></div>
+    <button class="btn primary" style="width:100%">Utwórz konto pacjenta</button></form><div class="alt">Masz konto? <a data-act="loginmode" data-m="in">Zaloguj się</a></div>`;
+  else if(mode==='up')body=`<h1>Utwórz konto pracownika</h1><p>Konto zostanie aktywowane po zatwierdzeniu przez administratora placówki.</p>
     <form data-form="signup"><div class="fg"><label class="fl">Imię i nazwisko</label><input class="field" name="full_name" required autocomplete="name"></div>
     <div class="fg"><label class="fl">E-mail</label><input class="field" type="email" name="email" required autocomplete="email"></div>
     <div class="fg"><label class="fl">Hasło (min. 8 znaków)</label><input class="field" type="password" name="password" minlength="8" required autocomplete="new-password"></div>
@@ -493,21 +563,27 @@ function viewLogin(mode='in'){
     <form data-form="signin"><div class="fg"><label class="fl">E-mail</label><input class="field" type="email" name="email" required autocomplete="username"></div>
     <div class="fg"><label class="fl">Hasło</label><input class="field" type="password" name="password" required autocomplete="current-password"></div>
     <button class="btn primary" style="width:100%">Zaloguj</button></form>
-    <div class="alt"><a data-act="forgot">Nie pamiętam hasła</a> · <a data-act="loginmode" data-m="up">Utwórz konto</a></div>`;
+    <div class="alt"><a data-act="forgot">Nie pamiętam hasła</a> · <a data-act="loginmode" data-m="pat">Jestem pacjentem</a> · <a data-act="loginmode" data-m="up">Konto pracownika</a></div>`;
   return `<div class="login"><div class="glass lbox"><img class="logo" src="${LOGO}" alt="Medicov MGS">${body}</div></div>`;
 }
 function viewPending(){
   return `<div class="login"><div class="glass lbox"><img class="logo" src="${LOGO}" alt="Medicov MGS"><h1>${ME.active?'Konto oczekuje na zatwierdzenie':'Konto jest nieaktywne'}</h1>
   <p>${ME.active?'Administrator placówki musi przypisać Ci rolę (lekarz, student, rejestracja). Po zatwierdzeniu odśwież stronę.':'Skontaktuj się z administratorem placówki.'}</p>
-  <p><b>${esc(ME.email||'')}</b></p><button class="btn" data-act="logout" style="margin:0 auto">${ic('logout')} Wyloguj</button></div></div>`;
+  <p><b>${esc(ME.email||'')}</b></p>
+  ${ME.active?`<form data-form="claim" style="text-align:left;margin:6px 0 14px"><label class="fl">Jestem pacjentem – mam kod z przychodni</label><div style="display:flex;gap:8px"><input class="field" name="code" placeholder="XXXXX-XXXXX" autocomplete="off" style="text-transform:uppercase"><button class="btn primary" style="flex:none">Połącz</button></div></form>`:''}
+  ${window._claimFail?'<p style="color:var(--bad)">Kod z rejestracji był nieprawidłowy lub wygasł. Poproś przychodnię o nowy.</p>':''}
+  <button class="btn" data-act="logout" style="margin:0 auto">${ic('logout')} Wyloguj</button></div></div>`;
 }
 
 /* ===================== SZKIELET ===================== */
-const NAV=()=>[
+const NAV=()=>ME&&ME.role==='patient'?[
+  {id:'',label:'Pulpit',ic:'dash',show:true},{id:'visits',label:'Moje wizyty',s:'Wizyty',ic:'visits',show:true},{id:'book',label:'Umów wizytę',s:'Umów',ic:'plus',show:true},
+  {id:'rx',label:'Recepty',ic:'rx',show:true},{id:'me',label:'Moje dane',s:'Dane',ic:'users',show:true}]:[
   {id:'',label:'Pulpit',ic:'dash',show:true},
   {id:'patients',label:'Pacjenci',ic:'patients',show:can.staff()},
   {id:'visits',label:'Wizyty',ic:'visits',show:can.staff()},
   {id:'rx',label:'Recepty',ic:'rx',show:can.rxRead()},
+  {id:'schedule',label:'Godziny przyjęć',ic:'clock',show:ME.role==='doctor'||can.admin()},
   {id:'users',label:'Użytkownicy',ic:'users',show:can.admin(),adm:true},
   {id:'settings',label:'Placówka',ic:'settings',show:can.admin(),adm:true},
   {id:'audit',label:'Dziennik zdarzeń',ic:'audit',show:can.admin(),adm:true}].filter(n=>n.show);
@@ -516,7 +592,7 @@ function shell(page,inner){
   const nav=NAV();let admHead=false;
   const side=nav.map(n=>{let h='';if(n.adm&&!admHead){admHead=true;h='<div class="sec">Administracja</div>'}
     return h+`<a href="#/${n.id}" class="${n.id===page?'on':''}">${ic(n.ic)}<span>${n.label}</span></a>`}).join('');
-  const tabs=nav.filter(n=>!n.adm).slice(0,4).map(n=>`<a href="#/${n.id}" class="${n.id===page?'on':''}">${ic(n.ic)}<span>${n.label}</span></a>`).join('')
+  const tabs=nav.filter(n=>!n.adm).slice(0,4).map(n=>`<a href="#/${n.id}" class="${n.id===page?'on':''}">${ic(n.ic)}<span>${n.s||n.label}</span></a>`).join('')
     +`<button data-act="more">${ic('more')}<span>Więcej</span></button>`;
   return `<div class="app"><aside class="side glass"><div class="brand"><img src="${LOGO}" alt="Medicov MGS"></div><nav class="nav">${side}</nav>
     <div class="me"><span class="av">${esc(initials(ME.full_name))}</span><span class="nm"><b>${esc(ME.full_name||ME.email)}</b><small>${esc(ROLE[ME.role])}${ME.is_admin?' • admin':''}</small></span>
@@ -539,7 +615,12 @@ function route(){
   const [,page='',id]=(location.hash||'#/').split('/');
   let html;
   try{
-    if(page==='patients')html=id?vPatient(id):vPatients();
+    if(ME.role==='patient'){
+      if(page==='visits')html=id?vMyVisit(id):vMyVisits();else if(page==='book')html=vBook();else if(page==='rx')html=id?vRxView(id):vRx();
+      else if(page==='me')html=vMe();else html=vPHome();
+    }
+    else if(page==='schedule'&&(ME.role==='doctor'||can.admin()))html=vSchedule();
+    else if(page==='patients')html=id?vPatient(id):vPatients();
     else if(page==='visits')html=id?vVisit(id):vVisits();
     else if(page==='rx')html=id?vRxView(id):vRx();
     else if(page==='users'&&can.admin())html=vUsers();
@@ -557,7 +638,7 @@ function visitRow(v,showDate){
   const p=pat(v.patient_id);
   return `<a class="row" href="#/visits/${v.id}"><div class="time">${showDate?`${pad(new Date(v.scheduled_at).getDate())}.${pad(new Date(v.scheduled_at).getMonth()+1)}<small>${fTime(v.scheduled_at)}</small>`:fTime(v.scheduled_at)}</div>
    <div class="mid"><b>${esc(pname(p))}</b><small>${esc(v.type)} • ${esc(dname(v.doctor_id))}${v.student_id?' • '+esc(dname(v.student_id)):''}</small></div>
-   <span class="pill ${v.status}">${ST[v.status]}</span><span class="chev">${ic('chev')}</span></a>`;
+   ${prof(v.created_by)&&prof(v.created_by).role==='patient'?'<span class="pill gray">online</span>':''}<span class="pill ${v.status}">${ST[v.status]}</span><span class="chev">${ic('chev')}</span></a>`;
 }
 function vDash(){
   const h=new Date().getHours(),greet=h<5?'Dobrej nocy':h<12?'Dzień dobry':h<18?'Miłego dnia':'Dobry wieczór';
@@ -576,7 +657,7 @@ function vDash(){
    +`<div class="kpis"><div class="kpi glass"><small>Wizyty dziś</small><b>${tv.length}</b><i>${tv.filter(v=>v.status==='odbyta').length} odbytych</i></div>
      <div class="kpi glass"><small>Pacjenci</small><b>${D.patients.length}</b><i>w bazie</i></div>
      ${can.rxRead()?`<div class="kpi glass"><small>Recepty w tym miesiącu</small><b>${rxm}</b><i>wystawionych</i></div>`:'<div class="kpi glass"><small>Najbliższe</small><b>'+next.length+'</b><i>zaplanowane</i></div>'}
-     <div class="kpi glass"><small>${ME.role==='doctor'?'Do zatwierdzenia':'Użytkownicy'}</small><b>${ME.role==='doctor'?unsigned:D.profiles.filter(p=>p.active&&p.role!=='pending').length}</b><i>${ME.role==='doctor'?'notatek studentów':'aktywnych'}</i></div></div>
+     <div class="kpi glass"><small>${ME.role==='doctor'?'Do zatwierdzenia':'Użytkownicy'}</small><b>${ME.role==='doctor'?unsigned:D.profiles.filter(p=>p.active&&p.role!=='pending'&&p.role!=='patient').length}</b><i>${ME.role==='doctor'?'notatek studentów':'aktywnych'}</i></div></div>
     <div class="cols"><div><div class="card glass"><h2>Dzisiejszy harmonogram<span class="sp"></span><a class="link" href="#/visits" style="font-size:13px;text-transform:none;letter-spacing:0">Cały kalendarz</a></h2>
       <div class="list">${tv.length?tv.map(v=>visitRow(v)).join(''):empty('Brak wizyt na dziś','visits')}</div></div></div>
      <div><div class="card glass"><h2>Wizyty – ostatnie 7 dni</h2><div class="bars">${days.map(d=>`<div><b>${d.n}</b><i style="height:${Math.max(4,d.n/mx*72)}px"></i>${d.l}</div>`).join('')}</div></div>
@@ -606,6 +687,8 @@ function vPatient(id){
    <div class="glass pbox"><span class="av lg">${esc(initials(p.first_name+' '+p.last_name))}</span><div class="nm"><h2>${esc(p.first_name+' '+p.last_name)}</h2>
    <small>${p.birth_date?age(p.birth_date)+' lat • ur. '+fDate(p.birth_date):''}${p.sex?' • '+(p.sex==='K'?'kobieta':p.sex==='M'?'mężczyzna':'inna'):''}</small></div><div class="acts" style="justify-content:flex-end">${acts}</div></div>
    ${p.allergies?`<div class="banner">${ic('warn')}<div><b>Alergie / uczulenia:</b> ${esc(p.allergies)}</div></div>`:''}
+   ${p.user_id?`<div class="banner info">${ic('check')}<div><b>Portal pacjenta:</b> konto połączone. Pacjent może umawiać wizyty online i oglądać swoje recepty.</div></div>`
+     :can.patients()?`<div class="banner info">${ic('info')}<div style="flex:1"><b>Portal pacjenta.</b> Pacjent nie ma jeszcze konta. Zweryfikuj jego tożsamość (dokument), a potem wygeneruj kod zaproszenia.</div><button class="btn sm" data-act="invite" data-id="${id}">Zaproszenie do portalu</button></div>`:''}
    <div class="seg" style="margin-bottom:14px"><button data-act="ptab" data-t="v" class="${tab==='v'?'on':''}">Wizyty (${vs.length})</button>${can.rxRead()?`<button data-act="ptab" data-t="r" class="${tab==='r'?'on':''}">Recepty (${rx.length})</button>`:''}<button data-act="ptab" data-t="d" class="${tab==='d'?'on':''}">Dane</button></div>
    ${tab==='v'?`<div class="list">${vs.length?vs.map(v=>visitRow(v,true)).join(''):empty('Brak wizyt','visits')}</div>`
     :tab==='r'&&can.rxRead()?`<div class="list">${rx.length?rx.map(r=>rxRow(r)).join(''):empty('Brak recept','rx')}</div>`
@@ -794,10 +877,10 @@ function vRxView(id){
   return `<div style="margin:2px 0 12px"><a class="link" href="#/rx">${ic('back').replace('class="i"','class="i" style="vertical-align:-5px"')} Recepty</a></div>
    <div class="acts" style="margin-bottom:14px"><button class="btn primary" data-act="printRx" data-id="${id}">${ic('print')} Drukuj</button>
    ${mine&&r.status==='wystawiona'?`<button class="btn" data-act="editRxNo" data-id="${id}">${ic('edit')} Numer e-recepty</button><button class="btn danger" data-act="cancelRx" data-id="${id}">Anuluj receptę</button>`:''}
-   <a class="btn" href="#/patients/${r.patient_id}">Karta pacjenta</a></div><div class="pwrap">${rxDoc(r)}</div>`;
+   ${ME.role!=='patient'?`<a class="btn" href="#/patients/${r.patient_id}">Karta pacjenta</a>`:''}</div><div class="pwrap">${rxDoc(r)}</div>`;
 }
 function printHtml(html,auditTable,auditId){
-  $('#printroot').innerHTML=html;guard(()=>A.audit('PRINT',auditTable,auditId));
+  $('#printroot').innerHTML=html;if(can.staff())guard(()=>A.audit('PRINT',auditTable,auditId));
   const done=()=>{$('#printroot').innerHTML='';window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);
   setTimeout(()=>window.print(),80);
 }
@@ -810,6 +893,102 @@ function visitDoc(v){
    <div class="box"><b>Zalecenia:</b><br>${esc(n.recommendations||'—').replace(/\n/g,'<br>')}</div>
    <div class="sign"><div></div><div style="text-align:right"><div class="ln">${esc(d.full_name||'')}${d.license_no?' • PWZ '+esc(d.license_no):''}</div></div></div>
    <div class="foot">Dokument informacyjny dla pacjenta. ${esc(s.footer_note||'')}</div></div>`;
+}
+
+
+/* ===================== PORTAL PACJENTA ===================== */
+const asc=(a,b)=>a.scheduled_at<b.scheduled_at?-1:1,desc=(a,b)=>a.scheduled_at<b.scheduled_at?1:-1;
+const isUpcoming=v=>v.status==='zaplanowana'&&new Date(v.scheduled_at)>new Date();
+const fLong=d=>new Date(d).toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'});
+function pvRow(v){
+  const d=new Date(v.scheduled_at),doc=prof(v.doctor_id);
+  return `<a class="row" href="#/visits/${v.id}"><div class="time">${pad(d.getDate())}.${pad(d.getMonth()+1)}<small>${fTime(v.scheduled_at)}</small></div>
+   <div class="mid"><b>${esc(dname(v.doctor_id))}</b><small>${esc(v.type)}${doc&&doc.specialty?' • '+esc(doc.specialty):''}</small></div>
+   <span class="pill ${v.status}">${ST[v.status]}</span><span class="chev">${ic('chev')}</span></a>`;
+}
+function vPHome(){
+  const p=D.patients[0],up=D.visits.filter(isUpcoming).sort(asc),past=D.visits.filter(v=>!isUpcoming(v)).sort(desc).slice(0,3),next=up[0];
+  const first=(p?p.first_name:(ME.full_name||'').split(' ')[0])||'';
+  return head(`Dzień dobry, ${esc(first)}`,new Date().toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'}),`<a class="btn primary" href="#/book">${ic('plus')} Umów wizytę</a>`)
+   +(!p?`<div class="banner">${ic('warn')}<div><b>Konto nie jest połączone z kartą pacjenta.</b> Zgłoś się do rejestracji po kod zaproszenia.</div></div>`:'')
+   +(next?`<div class="hero glass"><small>Najbliższa wizyta</small><div class="when">${esc(fLong(next.scheduled_at))}, ${fTime(next.scheduled_at)}</div>
+      <div class="who">${esc(dname(next.doctor_id))}${prof(next.doctor_id)&&prof(next.doctor_id).specialty?' • '+esc(prof(next.doctor_id).specialty):''} • ${esc(next.type)}</div>
+      <div class="acts"><a class="btn sm" href="#/visits/${next.id}">Szczegóły</a></div></div>`
+     :`<div class="hero glass"><small>Najbliższa wizyta</small><div class="when" style="font-size:24px">Brak zaplanowanych wizyt</div><div class="acts"><a class="btn primary" href="#/book">${ic('plus')} Umów wizytę</a></div></div>`)
+   +`<div class="cols"><div class="card glass"><h2>Nadchodzące wizyty<span class="sp"></span><a class="link" href="#/visits" style="font-size:13px;text-transform:none;letter-spacing:0">Wszystkie</a></h2>
+      <div class="list">${up.length?up.slice(0,4).map(pvRow).join(''):empty('Nie masz zaplanowanych wizyt','visits')}</div></div>
+     <div class="card glass"><h2>Ostatnie wizyty</h2><div class="list">${past.length?past.map(pvRow).join(''):empty('Brak historii wizyt','visits')}</div></div></div>
+    ${D.prescriptions.length?`<div class="card glass"><h2>Ostatnie recepty<span class="sp"></span><a class="link" href="#/rx" style="font-size:13px;text-transform:none;letter-spacing:0">Wszystkie</a></h2><div class="list">${D.prescriptions.slice(0,3).map(rxRow).join('')}</div></div>`:''}`;
+}
+function vMyVisits(){
+  const up=D.visits.filter(isUpcoming).sort(asc),past=D.visits.filter(v=>!isUpcoming(v)).sort(desc);
+  return head('Moje wizyty',`${D.visits.length} w historii`,`<a class="btn primary" href="#/book">${ic('plus')} Umów wizytę</a>`)
+   +`<div class="card glass"><h2>Nadchodzące</h2><div class="list">${up.length?up.map(pvRow).join(''):empty('Nie masz zaplanowanych wizyt','visits')}</div></div>
+     <div class="card glass"><h2>Historia</h2><div class="list">${past.length?past.map(pvRow).join(''):empty('Brak historii wizyt','visits')}</div></div>`;
+}
+async function loadMyNotes(id){const r=await A.list('visit_notes',{eq:{visit_id:id}}).catch(()=>[]);NOTES[id]=r[0]||{visit_id:id}}
+function vMyVisit(id){
+  const v=D.visits.find(x=>x.id===id);if(!v)return head('Nie znaleziono wizyty','')+empty('Wizyta nie istnieje.');
+  if(NOTES[id]===undefined&&!isUpcoming(v)){loadMyNotes(id).then(()=>{if(location.hash==='#/visits/'+id)rerender()})}
+  const n=NOTES[id],doc=prof(v.doctor_id),canCancel=isUpcoming(v)&&new Date(v.scheduled_at).getTime()>Date.now()+2*3600e3,rxs=D.prescriptions.filter(r=>r.visit_id===id);
+  return `<div style="margin:2px 0 12px"><a class="link" href="#/visits">${ic('back').replace('class="i"','class="i" style="vertical-align:-5px"')} Moje wizyty</a></div>
+   <div class="glass pbox"><span class="av lg">${esc(initials(dname(v.doctor_id)))}</span><div class="nm"><h2>${esc(fLong(v.scheduled_at))}, ${fTime(v.scheduled_at)}</h2>
+   <small>${esc(dname(v.doctor_id))}${doc&&doc.specialty?' • '+esc(doc.specialty):''} • ${esc(v.type)}</small></div><span class="pill ${v.status}">${ST[v.status]}</span></div>
+   ${isUpcoming(v)?`<div class="acts" style="margin-bottom:16px">${canCancel?`<button class="btn danger" data-act="pCancel" data-id="${id}">Odwołaj wizytę</button>`:`<div class="banner info" style="margin:0;flex:1">${ic('info')}<div>Do wizyty zostały mniej niż 2 godziny. Aby ją odwołać lub zmienić, zadzwoń do przychodni${D.settings.phone?': <b>'+esc(D.settings.phone)+'</b>':''}.</div></div>`}</div>`:''}
+   ${!isUpcoming(v)&&v.status==='odbyta'?(n===undefined?empty('Wczytywanie…'):n.signed_at
+      ?`<div class="card glass"><h2>Zalecenia po wizycie<span class="sp"></span><button class="btn sm" data-act="printVisit" data-id="${id}">${ic('print')} Drukuj</button></h2>
+         <div class="kv"><div>Rozpoznanie</div><div>${esc([n.diagnosis_code,n.diagnosis].filter(Boolean).join(' – ')||'—')}</div><div>Zalecenia</div><div style="white-space:pre-wrap">${esc(n.recommendations||'—')}</div></div></div>`
+      :`<div class="banner info">${ic('info')}<div>Zalecenia pojawią się tutaj, gdy lekarz zatwierdzi dokumentację wizyty.</div></div>`):''}
+   ${rxs.length?`<div class="card glass"><h2>Recepty z tej wizyty</h2><div class="list">${rxs.map(rxRow).join('')}</div></div>`:''}`;
+}
+const BK={doc:null,days:{},day:null,slot:null,loading:false,err:''};
+async function bkLoad(){
+  BK.loading=true;BK.slot=null;BK.err='';rerender();
+  const from=dKey(new Date()),to=new Date();to.setDate(to.getDate()+28);
+  try{
+    const r=await A.rpc('medicov_free_slots',{p_doctor:BK.doc,p_from:from,p_to:dKey(to)});
+    BK.days={};(r||[]).forEach(x=>{const s=new Date(x.slot).toISOString(),k=dKey(s);(BK.days[k]=BK.days[k]||[]).push(s)});
+    const keys=Object.keys(BK.days).sort();if(!BK.day||!BK.days[BK.day])BK.day=keys[0]||null;
+  }catch(e){BK.err=e.message||'Nie udało się pobrać terminów'}
+  BK.loading=false;rerender();
+}
+function vBook(){
+  const docs=D.profiles.filter(p=>p.role==='doctor'&&p.active);
+  let h=head('Umów wizytę','Wybierz lekarza, dzień i godzinę')+`<div class="card glass"><h2>1. Lekarz</h2><div class="list">${docs.length?docs.map(d=>`<a class="row" data-act="bkDoc" data-id="${d.id}" style="cursor:pointer"><span class="av">${esc(initials(d.full_name))}</span>
+     <div class="mid"><b>${esc(d.full_name)}</b><small>${esc(d.specialty||'Lekarz')}</small></div>${BK.doc===d.id?'<span class="pill blue">Wybrany</span>':`<span class="chev">${ic('chev')}</span>`}</a>`).join(''):empty('Brak dostępnych lekarzy','patients')}</div></div>`;
+  if(BK.doc){
+    const keys=Object.keys(BK.days).sort();
+    if(BK.loading)h+=`<div class="card glass"><div class="empty"><span class="spin" style="display:inline-block;width:18px;height:18px;border:3px solid rgba(var(--accent-rgb),.3);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite"></span><div style="margin-top:8px">Szukam wolnych terminów…</div></div></div>`;
+    else if(BK.err)h+=`<div class="banner">${ic('warn')}<div>${esc(BK.err)}</div></div>`;
+    else if(!keys.length)h+=`<div class="banner info">${ic('info')}<div>Ten lekarz nie ma wolnych terminów w najbliższych 4 tygodniach. Zadzwoń do przychodni${D.settings.phone?': <b>'+esc(D.settings.phone)+'</b>':''}.</div></div>`;
+    else{
+      h+=`<div class="card glass"><h2>2. Dzień</h2><div class="days">${keys.map(k=>{const d=new Date(k+'T00:00');return `<button class="day has ${k===BK.day?'on':''}" data-act="bkDay" data-k="${k}"><small>${d.toLocaleDateString('pl-PL',{weekday:'short'})}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString('pl-PL',{month:'short'})}</small></button>`}).join('')}</div></div>
+        <div class="card glass"><h2>3. Godzina${BK.day?' – '+esc(fLong(BK.day+'T00:00')):''}</h2><div class="chips">${(BK.days[BK.day]||[]).map(s=>`<button class="chip ${s===BK.slot?'sel':''}" data-act="bkSlot" data-s="${s}">${fTime(s)}</button>`).join('')}</div>
+        <div class="fg" style="margin-top:12px"><label class="fl">Rodzaj wizyty</label><select class="field" id="bktype"><option>Konsultacja</option><option>Wizyta kontrolna</option><option>Teleporada</option></select></div>
+        <button class="btn primary" data-act="bkConfirm" ${BK.slot?'':'disabled'} style="width:100%">${BK.slot?`Umów wizytę – ${esc(fLong(BK.slot))}, ${fTime(BK.slot)}`:'Wybierz godzinę'}</button>
+        <p class="hint" style="margin-top:8px">Wizytę możesz odwołać online do 2 godzin przed terminem. Maksymalnie 5 zaplanowanych wizyt jednocześnie.</p></div>`;
+    }
+  }
+  return h;
+}
+function vMe(){
+  const p=D.patients[0];
+  if(!p)return head('Moje dane','')+`<div class="banner">${ic('warn')}<div>Konto nie jest połączone z kartą pacjenta. Zgłoś się do rejestracji po kod zaproszenia.</div></div><button class="btn" data-act="logout">${ic('logout')} Wyloguj</button>`;
+  return head('Moje dane','',`<button class="btn" data-act="editContact">${ic('edit')} Zmień dane kontaktowe</button>`)
+   +`<div class="list"><div class="kv"><div>Imię i nazwisko</div><div>${esc(p.first_name+' '+p.last_name)}</div><div>Data urodzenia</div><div>${fDate(p.birth_date)}</div><div>Telefon</div><div>${esc(p.phone||'—')}</div><div>E-mail</div><div>${esc(p.email||'—')}</div><div>Adres</div><div>${esc(p.address||'—')}</div><div>Alergie</div><div>${esc(p.allergies||'—')}</div></div></div>
+   <p class="hint" style="margin:12px 4px">Dane osobowe, PESEL i informacje medyczne zmienia przychodnia – zgłoś zmianę w rejestracji. Dane kontaktowe możesz poprawić sam.</p>
+   <div class="acts" style="margin-top:14px"><button class="btn danger" data-act="logout">${ic('logout')} Wyloguj</button></div>`;
+}
+/* ===================== GODZINY PRZYJĘĆ (lekarz / administrator) ===================== */
+const WD=['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
+function vSchedule(){
+  const docs=D.profiles.filter(p=>p.role==='doctor'&&p.active&&(can.admin()||p.id===ME.id));
+  return head('Godziny przyjęć','Pacjenci umawiają wizyty online tylko w tych godzinach')
+   +(docs.length?docs.map(d=>{
+      const rows=D.avail.filter(a=>a.doctor_id===d.id).sort((a,b)=>a.weekday-b.weekday||String(a.start_time).localeCompare(String(b.start_time)));
+      return `<div class="card glass"><h2>${esc(d.full_name)}<span class="sp"></span><button class="btn sm" data-act="addAvail" data-id="${d.id}">${ic('plus')} Dodaj godziny</button></h2>
+       <div class="list">${rows.length?rows.map(a=>`<div class="row nolead"><div class="mid"><b>${WD[a.weekday-1]}</b><small>${String(a.start_time).slice(0,5)}–${String(a.end_time).slice(0,5)} • wizyta co ${a.slot_minutes} min</small></div><button class="x" data-act="delAvail" data-id="${a.id}" aria-label="Usuń">×</button></div>`).join(''):empty('Brak godzin. Pacjenci nie mogą umawiać się online do tego lekarza.','visits')}</div></div>`}).join('')
+     :empty('Brak lekarzy','users'));
 }
 
 /* ===================== ADMINISTRACJA ===================== */
@@ -826,7 +1005,7 @@ function vUsers(){
 function openUserForm(id){
   const p=prof(id);
   sheet('Konto: '+esc(p.full_name||p.email),`<div class="fg"><label class="fl">Imię i nazwisko</label><input class="field" name="full_name" value="${esc(p.full_name||'')}"></div>
-   <div class="frow"><div class="fg"><label class="fl">Rola</label><select class="field" name="role">${Object.entries(ROLE).map(([k,l])=>`<option value="${k}" ${p.role===k?'selected':''}>${l}</option>`).join('')}</select></div>
+   <div class="frow"><div class="fg"><label class="fl">Rola</label><select class="field" name="role">${Object.entries(ROLE).filter(([k])=>k!=='patient'||p.role==='patient').map(([k,l])=>`<option value="${k}" ${p.role===k?'selected':''}>${l}</option>`).join('')}</select></div>
    <div class="fg"><label class="fl">Specjalizacja</label><input class="field" name="specialty" value="${esc(p.specialty||'')}"></div></div>
    <div class="frow"><div class="fg"><label class="fl">Numer PWZ (lekarze)</label><input class="field" name="license_no" value="${esc(p.license_no||'')}"></div>
    <div class="fg"><label class="fl">Rok studiów (studenci)</label><input class="field" name="year_of_study" value="${esc(p.year_of_study||'')}"></div></div>
@@ -941,6 +1120,41 @@ const ACT={
     sheet('Dane e-recepty',`<div class="fg"><label class="fl">Numer e-recepty (P1)</label><input class="field" name="eprescription_no" value="${esc(r.eprescription_no||'')}"></div><div class="fg"><label class="fl">Kod dostępowy</label><input class="field" name="access_code" value="${esc(r.access_code||'')}"></div>`,
     async fd=>{const s=await A.update('prescriptions',r.id,{eprescription_no:fd.get('eprescription_no')||null,access_code:fd.get('access_code')||null});Object.assign(r,s);toast('Zapisano');route();return true})},
   editUser:el=>openUserForm(el.dataset.id),
+  invite:el=>guard(async()=>{
+    const code=await A.rpc('medicov_generate_link_code',{p_patient:el.dataset.id}),p=pat(el.dataset.id);
+    sheet('Zaproszenie do portalu',`<p style="margin:0 0 6px;color:var(--muted)">Pacjent: <b style="color:var(--text)">${esc(pname(p))}</b></p><div class="bigcode" id="icode">${esc(code)}</div>
+      <div class="banner info" style="margin-bottom:0">${ic('info')}<div>Przekaż kod pacjentowi <b>po sprawdzeniu jego tożsamości</b>. Kod jest jednorazowy i ważny 14 dni. Pacjent wchodzi na stronę, wybiera <b>„Jestem pacjentem”</b> i wpisuje swoje dane oraz ten kod.</div></div>`,async()=>true);
+    $('#sheetOk').classList.add('hide');
+    const b=document.createElement('button');b.type='button';b.className='btn primary';b.textContent='Kopiuj kod';
+    b.onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(code):Promise.reject()).then(()=>toast('Skopiowano kod'),()=>toast('Zaznacz i skopiuj kod ręcznie',true))};
+    $('#modal .bt').appendChild(b);
+  }),
+  bkDoc:el=>{BK.doc=el.dataset.id;BK.day=null;bkLoad()},
+  bkDay:el=>{BK.day=el.dataset.k;BK.slot=null;rerender()},
+  bkSlot:el=>{BK.slot=el.dataset.s;rerender()},
+  bkConfirm:()=>guard(async()=>{
+    const type=($('#bktype')||{}).value||'Konsultacja';
+    try{await A.rpc('medicov_book_visit',{p_doctor:BK.doc,p_at:BK.slot,p_type:type})}
+    catch(e){toast(e.message,true);await bkLoad();return}
+    D.visits=await A.list('visits',{order:['scheduled_at',false],limit:500});BK.slot=null;BK.doc=null;BK.days={};
+    toast('Wizyta umówiona');location.hash='#/visits';
+  }),
+  pCancel:el=>{if(!confirm('Odwołać tę wizytę?'))return;guard(async()=>{
+    await A.rpc('medicov_cancel_visit',{p_id:el.dataset.id});D.visits=await A.list('visits',{order:['scheduled_at',false],limit:500});toast('Wizyta odwołana');route()})},
+  editContact:()=>{const p=D.patients[0];
+    sheet('Dane kontaktowe',`<div class="fg"><label class="fl">Telefon</label><input class="field" type="tel" name="phone" value="${esc(p.phone||'')}"></div>
+      <div class="fg"><label class="fl">E-mail</label><input class="field" type="email" name="email" value="${esc(p.email||'')}"></div><div class="fg"><label class="fl">Adres</label><input class="field" name="address" value="${esc(p.address||'')}"></div>`,
+    async fd=>{await A.rpc('medicov_update_my_contact',{p_phone:fd.get('phone')||'',p_email:fd.get('email')||'',p_address:fd.get('address')||''});
+      Object.assign(p,{phone:fd.get('phone'),email:fd.get('email'),address:fd.get('address')});toast('Zapisano');route();return true})},
+  addAvail:el=>{const doc=el.dataset.id;
+    sheet('Dodaj godziny przyjęć',`<div class="fg"><label class="fl">Dni tygodnia</label><div class="chips">${WD.map((w,i)=>`<label class="chip" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" name="wd" value="${i+1}" ${i<5?'checked':''}> ${w.slice(0,3)}</label>`).join('')}</div></div>
+      <div class="frow"><div class="fg"><label class="fl">Od</label><input class="field" type="time" name="from" value="08:00" required></div><div class="fg"><label class="fl">Do</label><input class="field" type="time" name="to" value="14:00" required></div></div>
+      <div class="fg"><label class="fl">Długość wizyty</label><select class="field" name="slot"><option>10</option><option>15</option><option selected>20</option><option>30</option><option>45</option><option>60</option></select></div>`,
+    async fd=>{const days=fd.getAll('wd');if(!days.length){toast('Zaznacz co najmniej jeden dzień',true);return false}
+      if(fd.get('to')<=fd.get('from')){toast('Godzina końca musi być późniejsza niż początku',true);return false}
+      for(const wd of days){const r=await A.insert('availability',{doctor_id:doc,weekday:+wd,start_time:fd.get('from'),end_time:fd.get('to'),slot_minutes:+fd.get('slot')});D.avail.push(r)}
+      toast('Dodano godziny przyjęć');route();return true})},
+  delAvail:el=>guard(async()=>{await A.remove('availability',el.dataset.id);D.avail=D.avail.filter(a=>a.id!==el.dataset.id);route()}),
   aiAsk:async el=>{
     const box=el.closest('.ai'),c=$('.aic',box).value.trim();
     if(c.length<3){toast('Opisz dolegliwości (min. 3 znaki)',true);return}
@@ -979,6 +1193,10 @@ document.addEventListener('submit',async e=>{
   if(t==='signin')guard(async()=>{const u=await A.signIn({email:fd.get('email'),password:fd.get('password')});await afterLogin(u.id)});
   else if(t==='signup')guard(async()=>{const r=await A.signUp({email:fd.get('email'),password:fd.get('password'),full_name:fd.get('full_name')});
     if(r.session)await afterLogin(r.user.id);else{toast('Konto utworzone. Sprawdź e-mail, aby potwierdzić adres.');window._lm='in';route()}});
+  else if(t==='patsignup')guard(async()=>{const r=await A.signUp({email:fd.get('email'),password:fd.get('password'),full_name:fd.get('full_name'),invite_code:fd.get('code')});
+    if(r.session)await afterLogin(r.user.id);else{toast('Konto utworzone. Potwierdź adres e-mail z wiadomości, a potem zaloguj się.');window._lm='in';route()}});
+  else if(t==='claim')guard(async()=>{const r=await A.rpc('medicov_claim_patient',{p_code:fd.get('code')});
+    if(!r){toast('Nieprawidłowy lub wygasły kod',true);return}window._claimFail=false;toast('Konto połączone z kartą pacjenta');await afterLogin(ME.id)});
   else if(t==='notes')guard(async()=>{await saveNotes(f.dataset.id,f);toast('Zapisano dokumentację');route()});
   else if(t==='settings')guard(async()=>{const s=await A.update('clinic_settings',1,Object.fromEntries(fd));D.settings=s;toast('Zapisano dane placówki')});
 });
