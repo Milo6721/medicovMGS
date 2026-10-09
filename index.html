@@ -431,7 +431,7 @@ function seed(){
 
 const isoDow=d=>(d.getDay()+6)%7+1;
 const DemoRpc={
-  medicov_public_doctors(){return Demo.db.profiles.filter(p=>p.role==='doctor'&&p.active).map(p=>({id:p.id,full_name:p.full_name,specialty:p.specialty||'',license_no:p.license_no||''}))},
+  medicov_public_doctors(){return Demo.db.profiles.filter(p=>p.role==='doctor'&&p.active).map(p=>({id:p.id,full_name:p.full_name,specialty:p.specialty||'',license_no:p.license_no||'',has_hours:Demo.db.availability.some(a=>a.doctor_id===p.id)}))},
   medicov_free_slots({p_doctor,p_from,p_to}){
     const out=[],min=Date.now()+3600e3,booked=new Set(Demo.db.visits.filter(v=>v.doctor_id===p_doctor&&v.status!=='odwolana').map(v=>new Date(v.scheduled_at).getTime()));
     const from=new Date(p_from+'T00:00'),to=new Date(p_to+'T00:00'),lim=new Date(from);lim.setDate(lim.getDate()+30);const end=to<lim?to:lim;
@@ -964,12 +964,13 @@ async function bkLoad(){
 function vBook(){
   const docs=D.profiles.filter(p=>p.role==='doctor'&&p.active);
   let h=head('Umów wizytę','Wybierz lekarza, dzień i godzinę')+`<div class="card glass"><h2>1. Lekarz</h2><div class="list">${docs.length?docs.map(d=>`<a class="row" data-act="bkDoc" data-id="${d.id}" style="cursor:pointer"><span class="av">${esc(initials(d.full_name))}</span>
-     <div class="mid"><b>${esc(d.full_name)}</b><small>${esc(d.specialty||'Lekarz')}</small></div>${BK.doc===d.id?'<span class="pill blue">Wybrany</span>':`<span class="chev">${ic('chev')}</span>`}</a>`).join(''):empty('Brak dostępnych lekarzy','patients')}</div></div>`;
+     <div class="mid"><b>${esc(d.full_name)}</b><small>${esc(d.specialty||'Lekarz')}</small></div>${d.has_hours===false?'<span class="pill gray">brak terminów online</span>':''}${BK.doc===d.id?'<span class="pill blue">Wybrany</span>':`<span class="chev">${ic('chev')}</span>`}</a>`).join(''):empty('Brak dostępnych lekarzy','patients')}</div></div>`;
   if(BK.doc){
     const keys=Object.keys(BK.days).sort();
     if(BK.loading)h+=`<div class="card glass"><div class="empty"><span class="spin" style="display:inline-block;width:18px;height:18px;border:3px solid rgba(var(--accent-rgb),.3);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite"></span><div style="margin-top:8px">Szukam wolnych terminów…</div></div></div>`;
     else if(BK.err)h+=`<div class="banner">${ic('warn')}<div>${esc(BK.err)}</div></div>`;
-    else if(!keys.length)h+=`<div class="banner info">${ic('info')}<div>Ten lekarz nie ma wolnych terminów w najbliższych 4 tygodniach. Zadzwoń do przychodni${D.settings.phone?': <b>'+esc(D.settings.phone)+'</b>':''}.</div></div>`;
+    else if(!keys.length){const dd=docs.find(x=>x.id===BK.doc),ph=D.settings.phone?': <b>'+esc(D.settings.phone)+'</b>':'';
+      h+=`<div class="banner info">${ic('info')}<div>${dd&&dd.has_hours===false?'Ten lekarz nie ma jeszcze ustawionych godzin przyjęć online, więc nie można się do niego umówić przez stronę. Zadzwoń do przychodni':'Wszystkie terminy tego lekarza w najbliższych 4 tygodniach są zajęte albo poza godzinami przyjęć. Zadzwoń do przychodni'}${ph}.</div></div>`}
     else{
       h+=`<div class="card glass"><h2>2. Dzień</h2><div class="days">${keys.map(k=>{const d=new Date(k+'T00:00');return `<button class="day has ${k===BK.day?'on':''}" data-act="bkDay" data-k="${k}"><small>${d.toLocaleDateString('pl-PL',{weekday:'short'})}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString('pl-PL',{month:'short'})}</small></button>`}).join('')}</div></div>
         <div class="card glass"><h2>3. Godzina${BK.day?' – '+esc(fLong(BK.day+'T00:00')):''}</h2><div class="chips">${(BK.days[BK.day]||[]).map(s=>`<button class="chip ${s===BK.slot?'sel':''}" data-act="bkSlot" data-s="${s}">${fTime(s)}</button>`).join('')}</div>
@@ -996,8 +997,23 @@ function vSchedule(){
    +(docs.length?docs.map(d=>{
       const rows=D.avail.filter(a=>a.doctor_id===d.id).sort((a,b)=>a.weekday-b.weekday||String(a.start_time).localeCompare(String(b.start_time)));
       return `<div class="card glass"><h2>${esc(d.full_name)}<span class="sp"></span><button class="btn sm" data-act="addAvail" data-id="${d.id}">${ic('plus')} Dodaj godziny</button></h2>
+       <div class="banner info schedprev" id="prev-${d.id}" style="margin-bottom:12px">${ic('info')}<div>Sprawdzam, co widzą pacjenci…</div></div>
        <div class="list">${rows.length?rows.map(a=>`<div class="row nolead"><div class="mid"><b>${WD[a.weekday-1]}</b><small>${String(a.start_time).slice(0,5)}–${String(a.end_time).slice(0,5)} • wizyta co ${a.slot_minutes} min</small></div><button class="x" data-act="delAvail" data-id="${a.id}" aria-label="Usuń">×</button></div>`).join(''):empty('Brak godzin. Pacjenci nie mogą umawiać się online do tego lekarza.','visits')}</div></div>`}).join('')
-     :empty('Brak lekarzy','users'));
+     :empty('Brak lekarzy','users'))+(setTimeout(schedulePreview,0),'');
+}
+async function schedulePreview(){
+  const from=dKey(new Date()),to=new Date();to.setDate(to.getDate()+14);
+  for(const el of $$('.schedprev')){
+    const id=el.id.replace('prev-','');
+    try{
+      const r=await A.rpc('medicov_free_slots',{p_doctor:id,p_from:from,p_to:dKey(to)}),n=(r||[]).length,rows=D.avail.filter(a=>a.doctor_id===id).length;
+      const first=n?new Date(r[0].slot):null;
+      const msg=!rows?'Ten lekarz <b>nie ma ustawionych godzin przyjęć</b>, więc pacjenci nie widzą żadnych terminów. Kliknij „Dodaj godziny”.'
+        :n?`Pacjenci widzą <b>${n} wolnych terminów</b> w ciągu 14 dni. Najbliższy: <b>${first.toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'})}, ${fTime(first)}</b>.`
+        :'Pacjenci <b>nie widzą żadnych wolnych terminów</b> w ciągu 14 dni: wszystkie są zajęte albo wybrane dni już minęły. Dodaj kolejne dni lub godziny.';
+      el.innerHTML=`${ic(n?'check':'warn')}<div>${msg}</div>`;el.classList.toggle('info',!!n);
+    }catch(e){el.innerHTML=`${ic('warn')}<div>Nie udało się sprawdzić terminów: ${esc(e.message||'błąd')}</div>`}
+  }
 }
 
 /* ===================== ADMINISTRACJA ===================== */
