@@ -246,6 +246,16 @@ a.btn{text-decoration:none}
   .sheet{border-radius:30px 30px 22px 22px}
 }
 
+/* wiadomości */
+.bdg{min-width:19px;height:19px;border-radius:10px;background:#e5484d;color:#fff;font-size:11px;font-weight:800;display:inline-grid;place-items:center;padding:0 5px;margin-left:auto;font-style:normal}
+.tabbar a{position:relative}.tabbar .bdg{position:absolute;top:2px;left:calc(50% + 6px);margin:0}
+.row.unread .mid b{color:var(--accent)}.row .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:none}
+.thread{display:flex;flex-direction:column;gap:10px;margin:6px 0 16px}
+.msg{max-width:min(560px,86%);padding:10px 14px;border-radius:20px;background:var(--field);line-height:1.45;white-space:pre-wrap;word-wrap:break-word;align-self:flex-start;box-shadow:0 0 0 .5px var(--field-bd)}
+.msg.mine{align-self:flex-end;background:var(--accent);color:#fff;box-shadow:none}
+.msg small{display:block;font-size:11.5px;opacity:.7;margin-top:4px}
+.msg b{display:block;font-size:12px;opacity:.75;margin-bottom:2px}
+
 /* druk */
 #printroot{display:none}
 .paper{background:#fff;color:#12202f;width:210mm;max-width:100%;min-height:140mm;padding:14mm 16mm;font:13px/1.45 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.25);border-radius:6px;margin:0 auto}
@@ -320,6 +330,7 @@ const ICON={
  users:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>',
  settings:'<path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
  audit:'<path d="M12 3l8 3v6c0 5-3.4 8.5-8 9-4.6-.5-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+ msg:'<path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z"/><path d="M8 10h8M8 13h5"/>',
  more:'<circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/>',
  plus:'<path d="M12 5v14M5 12h14"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
  print:'<path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/>',
@@ -370,7 +381,7 @@ const Sb={
 };
 
 const Demo={
-  K:'medicov-demo-v3',
+  K:'medicov-demo-v4',
   load(){try{this.db=JSON.parse(store.get(this.K))}catch(_){}if(!this.db){this.db=seed();this.save()}},
   save(){store.set(this.K,JSON.stringify(this.db))},
   reset(){store.del(this.K);this.load()},
@@ -426,11 +437,41 @@ function seed(){
    {id:'r2',number:'MGS/'+now.getFullYear()+'/000002',eprescription_no:'',access_code:'',patient_id:'p2',visit_id:'v2',doctor_id:'u-adm',issued_at:rxd(0),valid_until:rxd(30),items:[{name:'Paracetamol',dose:'500 mg',qty:'20 tabl.',dosage:'1–2 tabl. co 6 h, max 8 tabl./dobę'}],refund:'pełnopłatna',notes:'',status:'wystawiona',created_at:iso()}];
   pts[0].user_id='u-pat';
   const AV=[];[1,2,3,4,5].forEach(d=>AV.push({id:'a-doc-'+d,doctor_id:'u-doc',weekday:d,start_time:'08:00',end_time:'14:00',slot_minutes:20}));[1,3,5].forEach(d=>AV.push({id:'a-adm-'+d,doctor_id:'u-adm',weekday:d,start_time:'12:00',end_time:'18:00',slot_minutes:30}));
-  return {availability:AV,profiles:P,patients:pts,visits:V,visit_notes:N,prescriptions:R,audit_log:[],clinic_settings:[{id:1,name:'Medicov MGS – Centrum Medyczne',address:'ul. Przykładowa 1, 30-001 Kraków',phone:'12 000 00 00',email:'kontakt@medicovmgs.pl',nip:'',regon:'',footer_note:''}]};
+  const ago=m=>new Date(Date.now()-m*60000).toISOString();
+  const TH=[{id:'th1',subject:'Dawkowanie leku',created_by:'u-pat',to_user:'u-doc',to_group:null,created_at:ago(300),last_message_at:ago(40)},
+    {id:'th2',subject:'Zmiana terminu wizyty',created_by:'u-pat',to_user:null,to_group:'reception',created_at:ago(2000),last_message_at:ago(1900)}];
+  const MS=[{id:'m1',thread_id:'th1',sender_id:'u-pat',body:'Dzień dobry, czy mam brać Amlodypinę rano czy wieczorem?',created_at:ago(300)},
+    {id:'m2',thread_id:'th1',sender_id:'u-doc',body:'Dzień dobry. Rano, o stałej porze. Proszę mierzyć ciśnienie i zapisywać wyniki do kolejnej wizyty.',created_at:ago(40)},
+    {id:'m3',thread_id:'th2',sender_id:'u-pat',body:'Czy mogę przesunąć wizytę na przyszły tydzień?',created_at:ago(2000)},
+    {id:'m4',thread_id:'th2',sender_id:'u-rec',body:'Tak, proszę wybrać nowy termin w zakładce „Umów wizytę” albo zadzwonić do nas.',created_at:ago(1900)}];
+  return {threads:TH,messages:MS,reads:[{thread_id:'th1',user_id:'u-pat',last_read_at:ago(300)},{thread_id:'th2',user_id:'u-pat',last_read_at:ago(1800)}],availability:AV,profiles:P,patients:pts,visits:V,visit_notes:N,prescriptions:R,audit_log:[],clinic_settings:[{id:1,name:'Medicov MGS – Centrum Medyczne',address:'ul. Przykładowa 1, 30-001 Kraków',phone:'12 000 00 00',email:'kontakt@medicovmgs.pl',nip:'',regon:'',footer_note:''}]};
 }
 
 const isoDow=d=>(d.getDay()+6)%7+1;
+const _nm=id=>(Demo.db.profiles.find(p=>p.id===id)||{}).full_name||'Użytkownik';
+const _party=t=>t.created_by===ME.id||t.to_user===ME.id||(t.to_group==='reception'&&(ME.role==='reception'||ME.is_admin))||(t.to_group==='admin'&&!!ME.is_admin);
+const _canT=t=>_party(t)||!!ME.is_admin||(t.to_group==='reception'&&ME.role==='reception');
+const _msgs=id=>Demo.db.messages.filter(m=>m.thread_id===id).sort((a,b)=>a.created_at<b.created_at?-1:1);
+const _read=id=>{const r=Demo.db.reads.find(x=>x.thread_id===id&&x.user_id===ME.id);if(r)r.last_read_at=iso();else Demo.db.reads.push({thread_id:id,user_id:ME.id,last_read_at:iso()});Demo.save()};
 const DemoRpc={
+  medicov_inbox(){return Demo.db.threads.filter(_canT).map(t=>{const ms=_msgs(t.id),lm=ms[ms.length-1],r=Demo.db.reads.find(x=>x.thread_id===t.id&&x.user_id===ME.id);
+    return {id:t.id,subject:t.subject,created_by:t.created_by,to_user:t.to_user,to_group:t.to_group,created_by_name:_nm(t.created_by),to_name:_nm(t.to_user),last_at:t.last_message_at,last_body:lm.body.slice(0,140),last_sender:lm.sender_id,unread:_party(t)&&lm.sender_id!==ME.id&&(!r||r.last_read_at<lm.created_at),oversight:!_party(t)}}).sort((a,b)=>a.last_at<b.last_at?1:-1)},
+  medicov_unread_count(){return DemoRpc.medicov_inbox().filter(x=>x.unread).length},
+  medicov_thread({p_thread}){const t=Demo.db.threads.find(x=>x.id===p_thread);if(!t||!_canT(t))throw new Error('Brak dostępu do wątku');_read(t.id);
+    return {...t,created_by_name:_nm(t.created_by),to_name:_nm(t.to_user),messages:_msgs(t.id).map(m=>({id:m.id,sender_id:m.sender_id,sender_name:_nm(m.sender_id),sent_by_name:m.sent_by?_nm(m.sent_by):null,body:m.body,created_at:m.created_at}))}},
+  medicov_new_thread({p_to_user,p_to_group,p_subject,p_body}){
+    const body=String(p_body||'').trim();if(!body||body.length>4000)throw new Error('Wiadomość musi mieć od 1 do 4000 znaków');
+    if(!!p_to_user===!!p_to_group)throw new Error('Wybierz jednego adresata');
+    const tgt=p_to_user&&Demo.db.profiles.find(x=>x.id===p_to_user&&x.active&&x.role!=='pending');if(p_to_user&&!tgt)throw new Error('Nie znaleziono adresata');
+    if(ME.role==='patient'&&(p_to_group==='admin'||(tgt&&tgt.role!=='doctor')))throw new Error('Pacjent może napisać do lekarza lub do rejestracji');
+    if(ME.role==='student'&&tgt&&tgt.role==='patient')throw new Error('Student nie może pisać do pacjentów');
+    const t={id:uid(),subject:String(p_subject||'').trim().slice(0,120)||'(bez tematu)',created_by:ME.id,to_user:p_to_user||null,to_group:p_to_group||null,created_at:iso(),last_message_at:iso()};
+    Demo.db.threads.push(t);Demo.db.messages.push({id:uid(),thread_id:t.id,sender_id:ME.id,body,created_at:iso()});_read(t.id);return t.id},
+  medicov_reply({p_thread,p_body,p_as}){const t=Demo.db.threads.find(x=>x.id===p_thread);if(!t||!_canT(t))throw new Error('Brak dostępu do wątku');
+    const body=String(p_body||'').trim();if(!body||body.length>4000)throw new Error('Wiadomość musi mieć od 1 do 4000 znaków');
+    let snd=ME.id;if(p_as&&p_as!==ME.id){const d=Demo.db.profiles.find(x=>x.id===p_as);if(!ME.is_admin)throw new Error('Tylko administrator może odpisać w imieniu lekarza');
+      if(!d||d.role!=='doctor'||![t.created_by,t.to_user].includes(p_as))throw new Error('W imieniu można odpisać tylko lekarzowi uczestniczącemu w rozmowie');snd=p_as}
+    Demo.db.messages.push({id:uid(),thread_id:t.id,sender_id:snd,sent_by:snd!==ME.id?ME.id:null,body,created_at:iso()});t.last_message_at=iso();_read(t.id);return null},
   medicov_public_doctors(){return Demo.db.profiles.filter(p=>p.role==='doctor'&&p.active).map(p=>({id:p.id,full_name:p.full_name,specialty:p.specialty||'',license_no:p.license_no||'',has_hours:Demo.db.availability.some(a=>a.doctor_id===p.id)}))},
   medicov_free_slots({p_doctor,p_from,p_to}){
     const out=[],min=Date.now()+3600e3,booked=new Set(Demo.db.visits.filter(v=>v.doctor_id===p_doctor&&v.status!=='odwolana').map(v=>new Date(v.scheduled_at).getTime()));
@@ -530,7 +571,7 @@ async function afterLogin(id){
   ME=await guard(()=>A.getProfile(id));
   if(!ME){await A.signOut();ME=null;route();return}
   if(ME.role==='pending'||!ME.active){route();return}
-  await loadAll();
+  await loadAll();refreshUnread();
   if(!location.hash||location.hash==='#/login')location.hash='#/';
   route();
 }
@@ -549,7 +590,7 @@ async function loadAll(){
   D._notes=ME.role==='doctor'?await A.list('visit_notes',{limit:1000}).catch(()=>[]):[];
   D.avail=await A.list('availability',{limit:1000}).catch(()=>[]);
 }
-function logout(){guard(async()=>{await A.signOut();ME=null;location.hash='#/login';route()})}
+function logout(){guard(async()=>{await A.signOut();ME=null;UNREAD=0;location.hash='#/login';route()})}
 
 function viewLogin(mode='in'){
   const demo=!LIVE;
@@ -587,10 +628,11 @@ function viewPending(){
 /* ===================== SZKIELET ===================== */
 const NAV=()=>ME&&ME.role==='patient'?[
   {id:'',label:'Pulpit',ic:'dash',show:true},{id:'visits',label:'Moje wizyty',s:'Wizyty',ic:'visits',show:true},{id:'book',label:'Umów wizytę',s:'Umów',ic:'plus',show:true},
-  {id:'rx',label:'Recepty',ic:'rx',show:true},{id:'me',label:'Moje dane',s:'Dane',ic:'users',show:true}]:[
+  {id:'messages',label:'Wiadomości',s:'Wiadom.',ic:'msg',show:true},{id:'rx',label:'Recepty',ic:'rx',show:true},{id:'me',label:'Moje dane',s:'Dane',ic:'users',show:true}]:[
   {id:'',label:'Pulpit',ic:'dash',show:true},
   {id:'patients',label:'Pacjenci',ic:'patients',show:can.staff()},
   {id:'visits',label:'Wizyty',ic:'visits',show:can.staff()},
+  {id:'messages',label:'Wiadomości',s:'Wiadom.',ic:'msg',show:true},
   {id:'rx',label:'Recepty',ic:'rx',show:can.rxRead()},
   {id:'schedule',label:'Godziny przyjęć',ic:'clock',show:ME.role==='doctor'||can.admin()},
   {id:'users',label:'Użytkownicy',ic:'users',show:can.admin(),adm:true},
@@ -600,8 +642,8 @@ const NAV=()=>ME&&ME.role==='patient'?[
 function shell(page,inner){
   const nav=NAV();let admHead=false;
   const side=nav.map(n=>{let h='';if(n.adm&&!admHead){admHead=true;h='<div class="sec">Administracja</div>'}
-    return h+`<a href="#/${n.id}" class="${n.id===page?'on':''}">${ic(n.ic)}<span>${n.label}</span></a>`}).join('');
-  const tabs=nav.filter(n=>!n.adm).slice(0,4).map(n=>`<a href="#/${n.id}" class="${n.id===page?'on':''}">${ic(n.ic)}<span>${n.s||n.label}</span></a>`).join('')
+    return h+`<a href="#/${n.id}" class="${n.id===page?'on':''}">${ic(n.ic)}<span>${n.label}</span>${n.id==='messages'&&UNREAD?`<i class="bdg">${UNREAD}</i>`:''}</a>`}).join('');
+  const tabs=nav.filter(n=>!n.adm).slice(0,4).map(n=>`<a href="#/${n.id}" class="${n.id===page?'on':''}">${ic(n.ic)}<span>${n.s||n.label}</span>${n.id==='messages'&&UNREAD?`<i class="bdg">${UNREAD}</i>`:''}</a>`).join('')
     +`<button data-act="more">${ic('more')}<span>Więcej</span></button>`;
   return `<div class="app"><aside class="side glass"><div class="brand"><img src="${LOGO}" alt="Medicov MGS"></div><nav class="nav">${side}</nav>
     <div class="me"><span class="av">${esc(initials(ME.full_name))}</span><span class="nm"><b>${esc(ME.full_name||ME.email)}</b><small>${esc(ROLE[ME.role])}${ME.is_admin?' • admin':''}</small></span>
@@ -626,8 +668,9 @@ function route(){
   try{
     if(ME.role==='patient'){
       if(page==='visits')html=id?vMyVisit(id):vMyVisits();else if(page==='book')html=vBook();else if(page==='rx')html=id?vRxView(id):vRx();
-      else if(page==='me')html=vMe();else html=vPHome();
+      else if(page==='me')html=vMe();else if(page==='messages'){html=null;vMessages(page,id)}else html=vPHome();
     }
+    else if(page==='messages'){html=null;vMessages(page,id)}
     else if(page==='schedule'&&(ME.role==='doctor'||can.admin()))html=vSchedule();
     else if(page==='patients')html=id?vPatient(id):vPatients();
     else if(page==='visits')html=id?vVisit(id):vVisits();
@@ -692,7 +735,7 @@ function vPatient(id){
   const vs=D.visits.filter(v=>v.patient_id===id).sort((a,b)=>a.scheduled_at<b.scheduled_at?1:-1);
   const rx=D.prescriptions.filter(r=>r.patient_id===id).sort((a,b)=>a.issued_at<b.issued_at?1:-1);
   const tab=window._pt||'v';
-  const acts=[can.visits()?`<button class="btn sm" data-act="newVisit" data-p="${id}">${ic('plus')} Wizyta</button>`:'',can.rxWrite()?`<button class="btn sm green" data-act="newRx" data-p="${id}">${ic('plus')} Recepta</button>`:'',can.patients()?`<button class="btn sm" data-act="editPatient" data-id="${id}">${ic('edit')} Edytuj</button>`:'',can.admin()?`<button class="btn sm danger" data-act="delPatient" data-id="${id}">Usuń</button>`:''].join('');
+  const acts=[ME.role!=='student'&&p.user_id?`<button class="btn sm" data-act="newMsg" data-to="u:${p.user_id}">${ic('msg')} Wiadomość</button>`:'',can.visits()?`<button class="btn sm" data-act="newVisit" data-p="${id}">${ic('plus')} Wizyta</button>`:'',can.rxWrite()?`<button class="btn sm green" data-act="newRx" data-p="${id}">${ic('plus')} Recepta</button>`:'',can.patients()?`<button class="btn sm" data-act="editPatient" data-id="${id}">${ic('edit')} Edytuj</button>`:'',can.admin()?`<button class="btn sm danger" data-act="delPatient" data-id="${id}">Usuń</button>`:''].join('');
   return `<div style="margin:2px 0 12px"><a class="link" href="#/patients">${ic('back').replace('class="i"','class="i" style="vertical-align:-5px"')} Pacjenci</a></div>
    <div class="glass pbox"><span class="av lg">${esc(initials(p.first_name+' '+p.last_name))}</span><div class="nm"><h2>${esc(p.first_name+' '+p.last_name)}</h2>
    <small>${p.birth_date?age(p.birth_date)+' lat • ur. '+fDate(p.birth_date):''}${p.sex?' • '+(p.sex==='K'?'kobieta':p.sex==='M'?'mężczyzna':'inna'):''}</small></div><div class="acts" style="justify-content:flex-end">${acts}</div></div>
@@ -933,7 +976,7 @@ function pvRow(v){
 function vPHome(){
   const p=D.patients[0],up=D.visits.filter(isUpcoming).sort(asc),past=D.visits.filter(v=>!isUpcoming(v)).sort(desc).slice(0,3),next=up[0];
   const first=(p?p.first_name:(ME.full_name||'').split(' ')[0])||'';
-  return head(`Dzień dobry, ${esc(first)}`,new Date().toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'}),`<a class="btn primary" href="#/book">${ic('plus')} Umów wizytę</a>`)
+  return head(`Dzień dobry, ${esc(first)}`,new Date().toLocaleDateString('pl-PL',{weekday:'long',day:'numeric',month:'long'}),`<a class="btn" href="#/messages">${ic('msg')} Wiadomości</a><a class="btn primary" href="#/book">${ic('plus')} Umów wizytę</a>`)
    +(!p?`<div class="banner">${ic('warn')}<div><b>Konto nie jest połączone z kartą pacjenta.</b> Zgłoś się do rejestracji po kod zaproszenia.</div></div>`:'')
    +(next?`<div class="hero glass"><small>Najbliższa wizyta</small><div class="when">${esc(fLong(next.scheduled_at))}, ${fTime(next.scheduled_at)}</div>
       <div class="who">${esc(dname(next.doctor_id))}${prof(next.doctor_id)&&prof(next.doctor_id).specialty?' • '+esc(prof(next.doctor_id).specialty):''} • ${esc(next.type)}</div>
@@ -958,6 +1001,7 @@ function vMyVisit(id){
   return `<div style="margin:2px 0 12px"><a class="link" href="#/visits">${ic('back').replace('class="i"','class="i" style="vertical-align:-5px"')} Moje wizyty</a></div>
    <div class="glass pbox"><span class="av lg">${esc(initials(dname(v.doctor_id)))}</span><div class="nm"><h2>${esc(fLong(v.scheduled_at))}, ${fTime(v.scheduled_at)}</h2>
    <small>${esc(dname(v.doctor_id))}${doc&&doc.specialty?' • '+esc(doc.specialty):''} • ${esc(v.type)}</small></div><span class="pill ${v.status}">${ST[v.status]}</span></div>
+   ${doc?`<div class="acts" style="margin-bottom:12px"><button class="btn" data-act="newMsg" data-to="u:${v.doctor_id}" data-subj="Wizyta ${esc(fDate(v.scheduled_at))}">${ic('msg')} Skontaktuj się z lekarzem</button></div>`:''}
    ${isUpcoming(v)?`<div class="acts" style="margin-bottom:16px">${canCancel?`<button class="btn danger" data-act="pCancel" data-id="${id}">Odwołaj wizytę</button>`:`<div class="banner info" style="margin:0;flex:1">${ic('info')}<div>Do wizyty zostały mniej niż 2 godziny. Aby ją odwołać lub zmienić, zadzwoń do przychodni${D.settings.phone?': <b>'+esc(D.settings.phone)+'</b>':''}.</div></div>`}</div>`:''}
    ${!isUpcoming(v)&&v.status==='odbyta'?(n===undefined?empty('Wczytywanie…'):n.signed_at
       ?`<div class="card glass"><h2>Zalecenia po wizycie<span class="sp"></span><button class="btn sm" data-act="printVisit" data-id="${id}">${ic('print')} Drukuj</button></h2>
@@ -1109,6 +1153,46 @@ async function vAudit(page){
   if(location.hash==='#/audit')$('#root').innerHTML=shell(page,html);
 }
 
+/* ===================== WIADOMOŚCI ===================== */
+let UNREAD=0;const GRP={reception:'Rejestracja',admin:'Administrator'};
+function updateBadges(){$$('a[href="#/messages"]').forEach(a=>{const b=a.querySelector('.bdg');if(b)b.remove();if(UNREAD){const i=document.createElement('i');i.className='bdg';i.textContent=UNREAD;a.appendChild(i)}})}
+async function refreshUnread(){if(!ME||ME.role==='pending'||!ME.active)return;try{const n=await A.rpc('medicov_unread_count');if(n!==UNREAD){UNREAD=n;updateBadges()}}catch(_){}}
+setInterval(async()=>{if(!ME||document.hidden)return;const b=UNREAD;await refreshUnread();const h=location.hash||'';
+  if(UNREAD!==b&&!$('#modal').classList.contains('on')&&(h==='#/messages'||(h.startsWith('#/messages/')&&!($('#msgbody')||{}).value)))route()},40000);
+const isParty=t=>t.created_by===ME.id||t.to_user===ME.id||(t.to_group==='reception'&&(ME.role==='reception'||!!ME.is_admin))||(t.to_group==='admin'&&!!ME.is_admin);
+const msgWho=t=>!isParty(t)?`${t.created_by_name} → ${t.to_group?GRP[t.to_group]:t.to_name}`:t.created_by===ME.id?'Do: '+(t.to_group?GRP[t.to_group]:t.to_name):'Od: '+t.created_by_name+(t.to_group?' (do: '+GRP[t.to_group]+')':'');
+const ago2=d=>{const m=Math.round((Date.now()-new Date(d))/60000);return m<1?'teraz':m<60?m+' min':m<1440&&dKey(d)===dKey(new Date())?fTime(d):fDate(d.slice(0,10))};
+async function vMessages(page,id){
+  const h=location.hash;let html;
+  if(id){
+    const t=await guard(()=>A.rpc('medicov_thread',{p_thread:id}));
+    if(location.hash!==h)return;if(!t){location.hash='#/messages';return}
+    refreshUnread();
+    const party=isParty(t);
+    const docs=ME.is_admin?[t.created_by,t.to_user].map(i=>D.profiles.find(p=>p.id===i)).filter(p=>p&&p.role==='doctor'&&p.id!==ME.id):[];
+    html=`<div style="margin:2px 0 12px"><a class="link" href="#/messages">${ic('back').replace('class="i"','class="i" style="vertical-align:-5px"')} Wiadomości</a></div>
+      <div class="top"><div><h1 style="font-size:24px">${esc(t.subject)}</h1><div class="sub">${esc(msgWho(t))}</div></div></div>
+      ${!party?`<div class="banner info">${ic('info')}<div><b>Podgląd administratora.</b> To nie Twoja rozmowa – możesz ją czytać i odpisać w imieniu lekarza (pacjent zobaczy jego nazwisko z dopiskiem „przez administrację”).</div></div>`:''}
+      <div class="thread">${t.messages.map(m=>`<div class="msg ${m.sender_id===ME.id&&!m.sent_by_name?'mine':''}">${m.sender_id===ME.id&&!m.sent_by_name?'':`<b>${esc(m.sender_name)}${m.sent_by_name?' • przez administrację':''}</b>`}${esc(m.body)}<small>${fDT(m.created_at)}${m.sent_by_name&&ME.is_admin?' • napisał(a): '+esc(m.sent_by_name):''}</small></div>`).join('')}</div>
+      <div class="card glass">${docs.length?`<div class="fg"><label class="fl">Odpowiadasz jako</label><select class="field" id="msgas">${docs.map(d=>`<option value="${d.id}">${esc(d.full_name)} (w imieniu lekarza)</option>`).join('')}<option value="">${esc(ME.full_name||'Ja')} (administrator)</option></select></div>`:''}<textarea class="field" id="msgbody" maxlength="4000" placeholder="Napisz odpowiedź…"></textarea>
+       ${ME.role==='patient'?'<div class="sub2" style="margin-top:8px;font-size:12.5px;opacity:.75">Wiadomość nie służy do pilnych spraw. W nagłym przypadku zadzwoń pod numer 112.</div>':''}
+       <div class="acts" style="margin-top:10px"><button class="btn primary" data-act="sendMsg" data-id="${t.id}">Wyślij</button></div></div>`;
+  }else{
+    const rows=await guard(()=>A.rpc('medicov_inbox'))||[];if(location.hash!==h)return;
+    UNREAD=rows.filter(r=>r.unread).length;
+    html=head('Wiadomości',rows.length?`${rows.length} ${rows.length===1?'rozmowa':'rozmów'}${UNREAD?' • '+UNREAD+' nieprzeczytane':''}`:'',`<button class="btn primary" data-act="newMsg">${ic('plus')} ${ME.role==='patient'?'Napisz do lekarza':'Nowa wiadomość'}</button>`)
+      +`<div class="list">${rows.length?rows.map(r=>`<a class="row ${r.unread?'unread':''}" href="#/messages/${r.id}"><div class="mid"><b>${esc(r.subject)}</b><small>${esc(msgWho(r))} • ${esc(r.last_body||'')}</small></div>${r.oversight?'<span class="pill gray">nadzór</span>':''}<span class="end">${ago2(r.last_at)}</span>${r.unread?'<span class="dot"></span>':''}<span class="chev">${ic('chev')}</span></a>`).join(''):empty('Nie masz jeszcze wiadomości','msg')}</div>`;
+  }
+  $('#root').innerHTML=shell(page,html);if(id)scrollTo(0,document.body.scrollHeight);
+}
+function msgRecipients(){
+  const opt=(v,t)=>`<option value="${v}">${esc(t)}</option>`;
+  if(ME.role==='patient')return [['Lekarze',D.profiles.filter(p=>p.role==='doctor').map(p=>['u:'+p.id,p.full_name+(p.specialty?' – '+p.specialty:'')])],['Przychodnia',[['g:reception','Rejestracja']]]];
+  const act=D.profiles.filter(p=>p.id!==ME.id&&p.active&&p.role!=='pending');
+  return [['Grupy',[['g:reception','Rejestracja'],['g:admin','Administrator']]],['Personel',act.filter(p=>p.role!=='patient').map(p=>['u:'+p.id,`${p.full_name} (${ROLE[p.role]})`])],
+    ['Pacjenci (konta w portalu)',ME.role==='student'?[]:act.filter(p=>p.role==='patient').map(p=>['u:'+p.id,p.full_name||p.email])]];
+}
+
 /* ===================== ASYSTENT AI ===================== */
 const AI={used:false,pending:[]};
 function aiBox(ctx,patientId,prefill=''){
@@ -1186,6 +1270,18 @@ const ACT={
   vstatus:el=>guard(async()=>{const s=await A.update('visits',el.dataset.id,{status:el.dataset.s});Object.assign(D.visits.find(v=>v.id===el.dataset.id),s);toast('Zmieniono status');route()}),
   sign:el=>guard(async()=>{const id=el.dataset.id;const f=$('form[data-form=notes]');await saveNotes(id,f);
     const n=await A.upsert('visit_notes',{visit_id:id,signed_by:ME.id,signed_at:iso()},'visit_id');NOTES[id]={...NOTES[id],...n};toast('Dokumentacja zatwierdzona');route()}),
+  newMsg:el=>{
+    const groups=msgRecipients().filter(g=>g[1].length),sel=el.dataset.to||'';
+    sheet(ME.role==='patient'?'Napisz do lekarza':'Nowa wiadomość',`
+      <div class="fg"><label class="fl">Do</label><select class="field" name="to" required>${groups.map(([l,o])=>`<optgroup label="${esc(l)}">${o.map(([v,t])=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(t)}</option>`).join('')}</optgroup>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Temat</label><input class="field" name="subject" maxlength="120" value="${esc(el.dataset.subj||'')}" placeholder="np. Pytanie o wyniki badań"></div>
+      <div class="fg"><label class="fl">Wiadomość</label><textarea class="field" name="body" required maxlength="4000" style="min-height:130px"></textarea></div>
+      ${ME.role==='patient'?'<div class="banner info" style="margin:0">'+ic('info')+'<div>Wiadomość nie służy do pilnych spraw ani nagłych przypadków – w takiej sytuacji zadzwoń pod numer 112. Lekarz odpowie, gdy będzie mógł.</div></div>':''}`,
+      async fd=>{const to=String(fd.get('to')||''),g=to.startsWith('g:');
+        const id=await A.rpc('medicov_new_thread',{p_to_user:g?null:to.slice(2),p_to_group:g?to.slice(2):null,p_subject:fd.get('subject'),p_body:fd.get('body')});
+        toast('Wiadomość wysłana');location.hash='#/messages/'+id;return true})},
+  sendMsg:el=>{const ta=$('#msgbody'),body=(ta&&ta.value||'').trim();if(!body)return;el.disabled=true;
+    guard(async()=>{await A.rpc('medicov_reply',{p_thread:el.dataset.id,p_body:body,p_as:($('#msgas')||{}).value||null});ta.value='';route()}).then(()=>{el.disabled=false})},
   printVisit:el=>{const v=D.visits.find(x=>x.id===el.dataset.id);printHtml(visitDoc(v),'visits',v.id,'zalecenia')},
   newRx:el=>openRxForm(el.dataset.p,el.dataset.v),
   addItem:()=>$('#items').insertAdjacentHTML('beforeend',itemRow()),
