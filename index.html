@@ -498,7 +498,7 @@ function mockAI(p){
   return {...base,summary:'Zbyt mało danych, aby zasugerować konkretne rozpoznania. To odpowiedź demonstracyjna.',
     differential:[{name:'Wymaga dalszego wywiadu i badania',icd10:'R69',likelihood:'średnie',reasoning:'Opis jest zbyt ogólny.'}],red_flags:[],clarifying_questions:['Od kiedy trwają objawy?','Jakie są objawy towarzyszące?','Jakie leki i choroby przewlekłe ma pacjent?'],tests:[],meds:[],recommendations:['Uzupełnij wywiad – spróbuj opisać np. „kaszel i gorączka od 3 dni”, „ból głowy”, „kołatania serca”.']};
 }
-async function guard(fn){try{return await fn()}catch(e){console.error(e);toast(e.message||'Wystąpił błąd',true);return null}}
+async function guard(fn){try{return await fn()}catch(e){console.error(e);const m=String(e.message||'');toast(/email not confirmed/i.test(m)?'Adres e-mail nie został potwierdzony. Kliknij link w wiadomości od systemu albo poproś administratora o potwierdzenie konta.':/row-level security/i.test(m)?'Brak uprawnień w bazie (RLS). Uruchom w Supabase plik naprawa-recept.sql oraz sprawdź, czy konto ma rolę Lekarz i jest aktywne.':(m||'Wystąpił błąd'),true);return null}}
 
 /* ===================== UPRAWNIENIA ===================== */
 const can={
@@ -888,10 +888,25 @@ function vRxView(id){
    ${mine&&r.status==='wystawiona'?`<button class="btn" data-act="editRxNo" data-id="${id}">${ic('edit')} Numer e-recepty</button><button class="btn danger" data-act="cancelRx" data-id="${id}">Anuluj receptę</button>`:''}
    ${ME.role!=='patient'?`<a class="btn" href="#/patients/${r.patient_id}">Karta pacjenta</a>`:''}</div><div class="pwrap">${rxDoc(r)}</div>`;
 }
-function printHtml(html,auditTable,auditId){
-  $('#printroot').innerHTML=html;if(can.staff())guard(()=>A.audit('PRINT',auditTable,auditId));
-  const done=()=>{$('#printroot').innerHTML='';window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);
-  setTimeout(()=>window.print(),80);
+function paperCss(){let c='';try{for(const sh of document.styleSheets)for(const r of sh.cssRules){if(r.selectorText&&r.selectorText.startsWith('.paper'))c+=r.cssText+'\n'}}catch(e){}return c}
+function printPage(html){return '<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Medicov MGS</title><style>@page{size:A4;margin:14mm}body{margin:0;background:#fff}'+paperCss()+'.paper{box-shadow:none;border-radius:0;width:100%;padding:0;min-height:0}</style></head><body>'+html+'</body></html>'}
+function closePrev(){const o=$('#prevov');if(o)o.remove();document.body.style.overflow=''}
+function printHtml(html,auditTable,auditId,name){
+  if(can.staff())guard(()=>A.audit('PRINT',auditTable,auditId));
+  closePrev();const page=printPage(html),fname=(name||'dokument')+'.html';
+  const o=document.createElement('div');o.id='prevov';
+  o.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(235,240,248,.97);display:flex;flex-direction:column';
+  o.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;background:rgba(255,255,255,.85)"><button class="btn primary" data-p="print">Drukuj</button><button class="btn" data-p="share">Udostępnij / zapisz PDF</button><button class="btn" data-p="close">Zamknij</button></div><div id="prevhint" style="padding:6px 14px;font-size:12px;color:#455468"></div><iframe style="flex:1;border:0;width:100%;background:#fff" title="Podgląd"></iframe>';
+  document.body.appendChild(o);document.body.style.overflow='hidden';
+  const fr=o.querySelector('iframe');fr.srcdoc=page;
+  const hint=t=>{o.querySelector('#prevhint').textContent=t};
+  o.addEventListener('click',async e=>{const b=e.target.closest('[data-p]');if(!b)return;const a=b.dataset.p;
+    if(a==='close')return closePrev();
+    if(a==='print'){try{fr.contentWindow.focus();fr.contentWindow.print();hint('Jeśli okno drukowania się nie otworzyło (np. w aplikacji na iPhonie): „Udostępnij / zapisz PDF” → Drukuj, albo otwórz portal w Safari.')}catch(x){hint('Drukowanie niedostępne – użyj „Udostępnij / zapisz PDF”.')}}
+    if(a==='share'){const file=new File([page],fname,{type:'text/html'});
+      try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'Medicov MGS'});return}}catch(x){if(x&&x.name==='AbortError')return}
+      const u=URL.createObjectURL(file),l=document.createElement('a');l.href=u;l.download=fname;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);hint('Plik zapisany – otwórz go i wybierz Drukuj / Zapisz jako PDF.')}
+  });
 }
 function visitDoc(v){
   const p=pat(v.patient_id)||{},n=NOTES[v.id]||{},d=prof(v.doctor_id)||{},s=D.settings||{};
@@ -1171,11 +1186,11 @@ const ACT={
   vstatus:el=>guard(async()=>{const s=await A.update('visits',el.dataset.id,{status:el.dataset.s});Object.assign(D.visits.find(v=>v.id===el.dataset.id),s);toast('Zmieniono status');route()}),
   sign:el=>guard(async()=>{const id=el.dataset.id;const f=$('form[data-form=notes]');await saveNotes(id,f);
     const n=await A.upsert('visit_notes',{visit_id:id,signed_by:ME.id,signed_at:iso()},'visit_id');NOTES[id]={...NOTES[id],...n};toast('Dokumentacja zatwierdzona');route()}),
-  printVisit:el=>{const v=D.visits.find(x=>x.id===el.dataset.id);printHtml(visitDoc(v),'visits',v.id)},
+  printVisit:el=>{const v=D.visits.find(x=>x.id===el.dataset.id);printHtml(visitDoc(v),'visits',v.id,'zalecenia')},
   newRx:el=>openRxForm(el.dataset.p,el.dataset.v),
   addItem:()=>$('#items').insertAdjacentHTML('beforeend',itemRow()),
   delItem:el=>{const it=el.closest('.it');if($$('#items .it').length>1)it.remove();else $$('input',it).forEach(i=>i.value='')},
-  printRx:el=>{const r=D.prescriptions.find(x=>x.id===el.dataset.id);printHtml(rxDoc(r),'prescriptions',r.id)},
+  printRx:el=>{const r=D.prescriptions.find(x=>x.id===el.dataset.id);printHtml(rxDoc(r),'prescriptions',r.id,'recepta-'+(r.number||''))},
   cancelRx:el=>{if(!confirm('Anulować tę receptę? Wydruk zostanie oznaczony jako anulowany.'))return;
     guard(async()=>{const r=await A.update('prescriptions',el.dataset.id,{status:'anulowana'});Object.assign(D.prescriptions.find(x=>x.id===el.dataset.id),r);toast('Recepta anulowana');route()})},
   editRxNo:el=>{const r=D.prescriptions.find(x=>x.id===el.dataset.id);
