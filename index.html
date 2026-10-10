@@ -1220,6 +1220,7 @@ function aiRender(box,r){
     ${ctx==='visit'?`<button type="button" class="btn sm" data-act="aiDx" data-i="${i}">Użyj</button>`:''}</div>`).join('');
   if(r.clarifying_questions?.length)h+=`<div class="blk">Warto dopytać</div><ul>${r.clarifying_questions.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
   if(r.tests?.length)h+=`<div class="blk">Badania do rozważenia</div><ul>${r.tests.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`;
+  if(!r.meds?.length)h+=`<div class="blk">Sugerowane leki</div><div class="it2"><div class="mid"><small>${esc(r.meds_note||'Asystent nie zaproponował leków dla tego opisu (zbyt mało danych lub leczenie farmakologiczne niewskazane). Dopisz leki ręcznie albo uzupełnij opis i zapytaj ponownie.')}</small></div>${rx?'<button type="button" class="btn sm" data-act="aiAsk">Zapytaj ponownie</button>':''}</div>`;
   if(r.meds?.length)h+=`<div class="blk">Sugerowane leki</div>`+r.meds.map((m,i)=>`<div class="it2"><div class="mid"><b>${esc(m.name)}</b> ${esc(m.dose)} ${m.form?'• '+esc(m.form):''} ${conflict(m)?'<span class="pill red">⚠ możliwa alergia pacjenta</span>':''}
     <small>${esc(m.dosage)} • ${esc(m.quantity)}</small><small>${esc(m.rationale)}</small>${m.cautions?`<small>Uwaga: ${esc(m.cautions)}</small>`:''}</div>
     <button type="button" class="btn sm green" data-act="aiMed" data-i="${i}">${rx?'Dodaj lek':'Do recepty'}</button></div>`).join('');
